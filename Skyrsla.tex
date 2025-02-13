@@ -1,0 +1,134 @@
+\documentclass{article}
+
+% --- Packages og uppsetning --- 
+\usepackage[top=0.9in, bottom=1in, left=1.5in, right=1.5in]{geometry}
+\usepackage[icelandic]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[sc]{mathpazo}
+\usepackage[parfill]{parskip}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{listingsutf8}
+
+\setcounter{secnumdepth}{-1} 
+\pagenumbering{gobble}
+
+\title{Tónleikarnir – Einstaklingsverkefni (Fyrri skil)}
+\author{Dæmi: Nafn Nemanda (brj46)}
+\date{Vor 2025}
+
+\begin{document}
+
+\maketitle
+
+\vspace{2em}
+
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{tonleikar.png} % Mynd ef vill
+\end{center}
+
+\newpage
+
+%--- 1. Inngangur ---
+\section{Inngangur}
+Markmið verkefnisins er að útbúa vefsíðu, kallaða \textbf{Tónleikarnir}, þar sem notendur geta:
+\begin{itemize}
+    \item Skráð sig inn og út (notendaumsjón).
+    \item Myndað hópa eða gengið í hópa.
+    \item Deilt YouTube-hlekkjum fyrir lag sem passar við gefið þema.
+    \item Kosið um það lag sem þeim finnst best passa þemað. 
+\end{itemize}
+
+Ég fékk þessa hugmynd frá leik sem við spilum í vinnunni, þar sem hver og einn setur YouTube-lag sem hann telur passa við ákveðið þema, og svo kjósum við uppáhalds lagið okkar sem okkur finnst best passa við þemað.
+
+%--- 2. Valin efnistök / Skilyrði ---
+\section{Valin efnistök og skilyrði}
+Verkefnið mun uppfylla a.m.k. þrjú af eftirtöldum atriðum:
+
+\begin{enumerate}[label=\alph*.]
+    \item \textbf{Bakendi:}  
+        \begin{itemize}
+            \item Node.js eða sambærilegt til að útfæra bakenda og notendaumsjón.
+            \item Stjórnun á hópum, innskráningu/útskráningu, og atkvæðagreiðslu.
+        \end{itemize}
+    \item \textbf{Vefþjónusta (REST API):}  
+        \begin{itemize}
+            \item API sem sinnir beiðnum um að skrá nýja notendur, búa til hópa, setja inn lög og skila atkvæðum.
+        \end{itemize}
+    \item \textbf{Framendi:}  
+        \begin{itemize}
+            \item Síða þar sem einstaklingar geta skráð sig inn, valið hópa, sent inn hlekki að lagi, spilað YouTube-vídeó og kosið.
+            \item framsetning með CSS (og smá css animations).
+        \end{itemize}
+\end{enumerate}
+
+\section{Tæknin sem verður notuð}
+\begin{itemize}
+    \item \textbf{Bakendi:} Node.js með Express.js. 
+    \item \textbf{Gagnagrunnur:} Einfaldur gagnagrunnur sennilega með postgreSQL. 
+    \item \textbf{Framendi:}  
+          \begin{itemize}
+            \item Hannað með Figma.
+            \item HTML og CSS og mögulega smá JavaScript.
+            \item \textbf{YouTube Embed}: Sýna myndbönd í sennilega með \texttt{iframe} svo notendur fari ekki af síðunni til að horfa.
+          \end{itemize}
+\end{itemize}
+
+%--- 4. Verkplan / Tímalína ---
+\section{Verkplan og Tímalína (vikur 6--13)}
+\begin{enumerate}[label=\arabic*.]
+    \item \textbf{Vika 6--7:}  
+    \begin{itemize}
+        \item Grunnhönnun: Hvernig notendur skrá sig, hópamyndun og flæði atkvæðagreiðslu og figma hönnunarskjöl.
+    \end{itemize}
+    \item \textbf{Vika 8--9:}  
+    \begin{itemize}
+        \item Útfæra bakenda: Notendaumsjón, inn- og útskráningu, geymslu á lögum og atkvæðum í gagnagrunni.
+        \item Setja upp einfalt REST API (t.d. \texttt{/login}, \texttt{/groups}, \texttt{/songs}).
+    \end{itemize}
+    \item \textbf{Vika 10--11:}  
+    \begin{itemize}
+        \item Tenging framenda og bakenda: klára búa til síðuna sjálfa (HTML/CSS/JS).
+        \item Bæta við YouTube embed svæðum til að spila lög beint á síðunni.
+    \end{itemize}
+    \item \textbf{Vika 12:}  
+    \begin{itemize}
+        \item Prófanir og villuleit.
+        \item Uppsetning í hýsingu ef tími gefst.
+    \end{itemize}
+    \item \textbf{Vika 13:}  
+    \begin{itemize}
+        \item Fínpússun og lokaskýrslugerð.
+        \item Undirbúningur fyrir kynningu.
+    \end{itemize}
+\end{enumerate}
+
+%--- 5. Matskvarði ---
+\section{Matskvarði}
+\begin{itemize}
+    \item \textbf{Bakendi og notendaumsjón (30\%):}  
+    Hvernig tekst til með innskráningu, útskráningu, hópastjórnun og atkvæði.
+    \item \textbf{Vefþjónusta (20\%):}  
+    Skýr og vel skilgreind REST API sem nær yfir helstu gögn (notendur, hópa, lög, atkvæði).
+    \item \textbf{Framendi (30\%):}  
+    Einfalt og þægilegt notendaviðmót sem sýnir YouTube embed, tekur við gögnum og auðveldar kosningu.
+    \item \textbf{Skýrsla og hönnunarskjöl (10\%):}  
+    Stutt en hnitmiðuð skýrsla um framgang verkefnis + grunnteikningar (t.d. flæðirit).
+    \item \textbf{Kynning (10\%):}  
+    Sýnir lykilvirkni, tímamörk virt, svarar spurningum frá kennara.
+\end{itemize}
+
+%--- 6. Kynning ---
+\section{Kynning}
+Ég ætla að kynna verkefnið!
+%--- 7. Lokaorð / næstu skref ---
+\section{Lokaorð}
+Þetta verkefni einbeitir sér að einföldum en skýrum virkniþáttum: notendaumsjón, hópamyndun, lagaskil með YouTube embed og kosningakeppni. Næstu skref eru að:
+\begin{itemize}
+    \item Klára hönnunarskjöl.
+    \item Setja upp umhverfi og gagnagrunn.
+    \item Taka fyrstu skrefin í bakenda- og framendaútfærslu.
+\end{itemize}
+
+\end{document}

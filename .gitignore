@@ -1,4 +1,4 @@
-*.png
+tonleikar.png
 *.aux
 *.fdb_latexmk
 *.fls
@@ -6,3 +6,7 @@
 *.synctex.gz
 node_modules
 package-lock.json
+email.png
+rice-paper.png
+user.png
+password.png

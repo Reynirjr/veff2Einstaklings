@@ -1,6 +1,59 @@
+:root {
+  /* Þema: Modern retro with rounded edges and subtle music motifs */
+
+  /* Primary Colors */
+  --electric-purple: #6C5CE7; /* For buttons, headers, accents */
+  --coral-pink: #FF7675;     /* For highlights and interactive elements */
+  --dark-charcoal: #2D3436;  /* Background/Text */
+
+  /* Secondary Colors */
+  --soft-purple: #A66EFA;    /* Soft Purple Gradient */
+  --warm-yellow: #FFEAA7;    /* For notifications/warnings */
+
+  /* Gradients */
+  --hero-gradient: linear-gradient(45deg, #6C5CE7, #A66EFA);
+
+  /* Fonts */
+  --header-font: 'Bebas Neue', sans-serif;      /* For main headers */
+  --subheader-font: 'Futura PT', sans-serif;      /* For subheaders */
+  --body-font: 'Montserrat', sans-serif;          /* For body text */
+  --decorative-font: 'Lobster', cursive;          /* For decorative elements */
+
+  --radius-buttons-cards: 8px;
+  --radius-containers: 16px;
+
+  --icon-equalizer: url('/path/to/equalizer-icon.svg'); /* Equalizer bars */
+  --icon-vinyl: url('/path/to/vinyl-icon.svg');         /* Vinyl record */
+  --icon-speaker: url('/path/to/speaker-icon.svg');     /* Speaker icon */
+
+  /* Motion Effects */
+  --hover-scale: 1.05; /* Smooth hover effect scaling */
+
+  /* Figma Components */
+  /* Login/Register Page */
+  --login-bg: #2D3436; /* Dark charcoal background */
+  --login-gradient-overlay: var(--hero-gradient);
+  --login-form-border: var(--electric-purple); /* Purple accent */
+
+  /* Input Fields */
+  --input-bg: #ffffff;
+  --input-placeholder-font: 'Montserrat', sans-serif;
+
+  /* Group Dashboard */
+  --group-card-gradient: linear-gradient(45deg, #6C5CE7, #A66EFA); /* Gradient card background */
+  --group-create-fab-bg: #FF7675; /* Floating action button (FAB) in coral pink */
+}
+
+
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 body {
     font-family: 'Helvetica', sans-serif;
-    background-color: #ffffff;
+    background-color: var(--dark-charcoal);
     margin: 0;
     padding: 0;
   }

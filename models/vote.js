@@ -1,26 +1,28 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-const User = require('./user'); 
 
-const Group = sequelize.define('Group', {
+const Vote = sequelize.define('Vote', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
   },
-  name: {
-    type: DataTypes.STRING,
+  song_id: {
+    type: DataTypes.INTEGER,
     allowNull: false,
   },
-  description: {
-    type: DataTypes.TEXT,
-  },
-  created_by: {
+  user_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
 }, {
   timestamps: true,
+  indexes: [
+    {
+      unique: true,
+      fields: ['song_id', 'user_id']
+    }
+  ]
 });
 
-module.exports = Group;
+module.exports = Vote;

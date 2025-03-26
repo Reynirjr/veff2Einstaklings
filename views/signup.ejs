@@ -1,0 +1,41 @@
+<%- include('partials/header') %>
+
+<main>
+    <h1>Skráning</h1>
+    
+    <form action="/signup" method="POST">
+        <div>
+            <label for="username">Notandanafn:</label>
+            <input type="text" id="username" name="username" 
+                   value="<%= formData.username ? formData.username : '' %>" required>
+            <% if (errors.username) { %>
+              <p style="color: red;"><%= errors.username %></p>
+            <% } %>
+        </div>
+        <div>
+            <label for="email">Netfang:</label>
+            <input type="email" id="email" name="email" 
+                   value="<%= formData.email ? formData.email : '' %>" required>
+            <% if (errors.email) { %>
+              <p style="color: red;"><%= errors.email %></p>
+            <% } %>
+        </div>
+        <div>
+            <label for="password">Lykilorð:</label>
+            <input type="password" id="password" name="password" required>
+            <% if (errors.password) { %>
+              <p style="color: red;"><%= errors.password %></p>
+            <% } %>
+        </div>
+        <div>
+            <label for="confirmPassword">Staðfesta Lykilorð:</label>
+            <input type="password" id="confirmPassword" name="confirmPassword" required>
+            <% if (errors.confirmPassword) { %>
+              <p style="color: red;"><%= errors.confirmPassword %></p>
+            <% } %>
+        </div>
+        <button type="submit">Skrá mig</button>
+    </form>
+</main>
+
+<%- include('partials/footer') %>

@@ -1,8 +1,27 @@
-<%- include ('partials/header') %>
+<%- include('partials/header') %>
 
 <main>
-    <h1> Innskráning </h1>
-    <p>Hér á að koma form fyrir login</p>
-</main>
-<%- include ('partials/footer') %>
+    <h1>Innskráning</h1>
 
+    <% if (signupSuccess) { %>
+      <p style="color: green;">Sign-up successful! Please log in.</p>
+    <% } %>
+
+    <% if (error) { %>
+      <p style="color: red;"><%= error %></p>
+    <% } %>
+
+    <form action="/login" method="POST">
+        <div>
+            <label for="email">Netfang:</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+        <div>
+            <label for="password">Lykilorð:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit">Innskrá</button>
+    </form>
+</main>
+
+<%- include('partials/footer') %>

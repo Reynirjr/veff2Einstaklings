@@ -4,6 +4,12 @@ const path = require('path');
 require('dotenv').config();
 const sequelize = require('./config/database');
 const { User, Group, Song, Vote } = require('./models');
+const helmet = require('helmet');
+app.use(helmet());
+
+sequelize.authenticate()
+  .then(() => console.log('Database connected successfully.'))
+  .catch(err => console.error('Unable to connect to the database:', err));
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));

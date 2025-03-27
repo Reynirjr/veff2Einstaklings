@@ -1,11 +1,21 @@
 const express = require('express');
 const app = express();
 const path = require('path');
+const cookieParser = require('cookie-parser'); // Move this import to the top
 require('dotenv').config();
 const sequelize = require('./config/database');
 const { User, Group, Song, Vote } = require('./models');
 const helmet = require('helmet');
 app.use(helmet());
+
+app.use(express.json());
+app.use(cookieParser());
+
+app.use((req, res, next) => {
+  res.locals.isAuthenticated = !!req.cookies.token;
+  next();
+});
+app.use(express.urlencoded({ extended: true }));
 
 sequelize.authenticate()
   .then(() => console.log('Database connected successfully.'))
@@ -13,6 +23,8 @@ sequelize.authenticate()
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+console.log('DB_NAME is:', process.env.DB_NAME);
 
 app.use(express.static(path.join(__dirname, 'public')));
 

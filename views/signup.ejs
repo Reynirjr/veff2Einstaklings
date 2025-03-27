@@ -3,6 +3,18 @@
 <main>
     <h1>Skráning</h1>
     
+    <% if (errors.server) { %>
+      <div style="color: red; background: #ffeeee; padding: 10px; margin-bottom: 15px; border: 1px solid #ff0000;">
+        <%= errors.server %>
+      </div>
+    <% } %>
+    
+    <% if (Object.keys(errors).length > 0) { %>
+      <div style="color: red; margin-bottom: 15px;">
+        Please correct the errors below.
+      </div>
+    <% } %>
+    
     <form action="/signup" method="POST">
         <div>
             <label for="username">Notandanafn:</label>

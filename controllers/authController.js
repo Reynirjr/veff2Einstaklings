@@ -14,14 +14,18 @@ exports.getLogin = (req, res) => {
 };
 
 exports.signup = async (req, res) => {
+  console.log('Signup request body:', req.body);
+  
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('Validation errors:', errors.array());
     const errorObj = {};
     errors.array().forEach(err => {
       if (!errorObj[err.param]) {
         errorObj[err.param] = err.msg;
       }
     });
+    console.log('Error object being sent to view:', errorObj);
     return res.status(400).render('signup', { 
       errors: errorObj, 
       formData: req.body || {} 
@@ -50,7 +54,7 @@ exports.signup = async (req, res) => {
     
     res.redirect('/login?signup=success');
   } catch (error) {
-    console.error(error);
+    console.error('Signup error details:', error);
     res.render('signup', { 
       errors: { server: 'Server error, please try again' }, 
       formData: req.body || {} 
@@ -64,29 +68,26 @@ exports.login = async (req, res) => {
     
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.redirect('/login?error=invalid');
     }
     
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.redirect('/login?error=invalid');
     }
     
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET || 'your_jwt_secret', {
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
       expiresIn: '1h'
     });
     
-    res.json({
-      message: 'Login successful',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username
-      }
+    res.cookie('token', token, { 
+      httpOnly: true,
+      maxAge: 3600000 
     });
+    
+    res.redirect('/');
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.redirect('/login?error=server');
   }
 };

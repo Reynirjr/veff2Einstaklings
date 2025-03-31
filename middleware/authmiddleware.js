@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const { User } = require('../models');
 
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   const token = req.cookies.token;
   if (!token) {
     return res.redirect('/login?error=unauthorized');
@@ -8,7 +9,13 @@ function authMiddleware(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; 
+    
+    const user = await User.findByPk(decoded.id);
+    if (!user) {
+      return res.redirect('/login?error=invalid_user');
+    }
+    
+    req.user = user;
     next();
   } catch (err) {
     console.error('JWT verification failed:', err);

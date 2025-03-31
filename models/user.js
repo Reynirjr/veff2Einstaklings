@@ -24,4 +24,18 @@ const User = sequelize.define('User', {
   timestamps: true, 
 });
 
+User.associate = (models) => {
+  User.hasMany(models.Group, { 
+    foreignKey: 'created_by', 
+    as: 'createdGroups' 
+  });
+  
+  User.belongsToMany(models.Group, {
+    through: 'GroupUser',
+    foreignKey: 'userId',
+    otherKey: 'groupId',
+    as: 'joinedGroups',
+  });
+};
+
 module.exports = User;

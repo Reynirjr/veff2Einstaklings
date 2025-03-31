@@ -1,0 +1,48 @@
+<%- include('partials/header') %>
+
+<main>
+  <h1><%= group.name %></h1>
+  
+  <div class="group-details">
+    <p><strong>Description:</strong> <%= group.description %></p>
+    <p><strong>Created by:</strong> <%= group.creator ? group.creator.username : 'Unknown' %></p>
+    
+    <h2>Voting Schedule</h2>
+    <p><strong>Day:</strong> <%= group.votingDay.charAt(0).toUpperCase() + group.votingDay.slice(1) %></p>
+    <p><strong>Time:</strong> <%= group.votingOpenTime %> - <%= group.votingCloseTime %></p>
+    <p><strong>Recurrence:</strong> <%= group.votingRecurrence %></p>
+    
+    <h2>Theme</h2>
+    <p><%= group.theme || 'No theme set' %></p>
+    
+    <h2>Members (<%= group.members.length %>)</h2>
+    <ul>
+      <% group.members.forEach(member => { %>
+        <li><%= member.username %> <%= member.GroupUser.role === 'admin' ? '(Admin)' : '' %></li>
+      <% }); %>
+    </ul>
+  </div>
+  
+  <div class="actions">
+    <% if (!isMember) { %>
+      <% if (group.passwordHash) { %>
+        <form action="/groups/<%= group.id %>/join" method="POST">
+          <div>
+            <label for="enteredPassword">Lykilorð hóps:</label>
+            <input type="password" name="enteredPassword" required>
+          </div>
+          <button type="submit" class="button">Gerast meðlimur hóps</button>
+        </form>
+      <% } else { %>
+        <form action="/groups/<%= group.id %>/join" method="POST">
+          <button type="submit" class="button">Gerast meðlimur hóps</button>
+        </form>
+      <% } %>
+    <% } else { %>
+      <p>Þu ert Meðlimur.</p>
+    <% } %>
+    <a href="/groups" class="button">Back to Groups</a>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

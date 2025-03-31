@@ -1,0 +1,120 @@
+<%- include('partials/header') %>
+
+<main>
+  <h1>Búa til hóp</h1>
+  
+  <form action="/groups" method="POST">
+    <div>
+      <label for="name">Veldu nafn:</label>
+      <input type="text" id="name" name="name" required>
+    </div>
+    
+    <div>
+      <label for="description">Description:</label>
+      <textarea id="description" name="description" rows="4"></textarea>
+    </div>
+    
+    <h2>Hvenær skal kjósa</h2>
+    
+    <div>
+      <label for="votingDay">Voting Day:</label>
+      <select id="votingDay" name="votingDay" required>
+        <option value="monday">Mánudagur</option>
+        <option value="tuesday">Þriðjudagur</option>
+        <option value="wednesday">Miðvikudagur</option>
+        <option value="thursday">Fimmtudagur</option>
+        <option value="friday" selected>Föstudagur</option>
+        <option value="saturday">Laugardagur</option>
+        <option value="sunday">Sunnudagur</option>
+      </select>
+    </div>
+    
+    <div>
+      <label for="votingOpenTime">Kosningar hefjast:</label>
+      <input type="time" id="votingOpenTime" name="votingOpenTime" value="08:00" required>
+    </div>
+    
+    <div>
+      <label for="votingCloseTime">Kosningar ljúka:</label>
+      <input type="time" id="votingCloseTime" name="votingCloseTime" value="12:00" required>
+    </div>
+    
+    <div>
+      <label for="votingRecurrence">Hvenær ætti að kjósa aftur:</label>
+      <select id="votingRecurrence" name="votingRecurrence">
+        <option value="none">Bara þetta eina skipti</option>
+        <option value="weekly" selected>Vikulega</option>
+        <option value="biweekly">Aðra hverja viku</option>
+        <option value="monthly">Mánaðarlega</option>
+      </select>
+    </div>
+    
+    <h2>Þema</h2>
+    
+    <div>
+      <label>
+        <input type="radio" name="themeOption" value="custom" checked> 
+        Velja þema
+      </label>
+      <input type="text" id="theme" name="theme" placeholder="e.g. 'Diskó' eða 'Hip hop">
+    </div>
+    
+    <div>
+      <label>
+        <input type="radio" name="themeOption" value="random"> 
+        Handahófskennt þema (surprise me!)
+      </label>
+      <div id="randomThemeOptions" style="margin-left: 25px; margin-top: 8px; color: #666; display: none;">
+        <p>Möguleikar:</p>
+        <ul style="margin-top: 5px;">
+          <li>Rokk Klassík </li>
+          <li>80's Popp</li>
+          <li>Hip-Hop Smellir</li>
+          <li>Suður Amerísk tónlist</li>
+          <li>Eurovision</li>
+          <li>Íslensk Tónlist</li>
+          <li>Kvikmyndatónlist</li>
+          <li>Jólatónlist</li>
+          <li>Sumarsmellir</li>
+          <li>Dægurlög</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div>
+      <h2>Aðgangsstýring</h2>
+      <label for="groupPassword">Lykilorð hóps (valfrjálst):</label>
+      <input type="password" name="groupPassword" id="groupPassword">
+      <p class="help-text">Skildu þetta autt til að búa til opinn hóp.</p>
+    </div>
+    
+    <button type="submit">Búa til Hóp</button>
+  </form>
+</main>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const randomRadio = document.querySelector('input[name="themeOption"][value="random"]');
+    const customRadio = document.querySelector('input[name="themeOption"][value="custom"]');
+    const themeInput = document.getElementById('theme');
+    const randomOptions = document.getElementById('randomThemeOptions');
+    
+    themeInput.disabled = !customRadio.checked;
+    
+    randomRadio.addEventListener('change', function() {
+      if (this.checked) {
+        randomOptions.style.display = 'block';
+        themeInput.disabled = true;
+      }
+    });
+    
+    customRadio.addEventListener('change', function() {
+      if (this.checked) {
+        randomOptions.style.display = 'none';
+        themeInput.disabled = false;
+      }
+    });
+  });
+</script>
+
+<%- include('partials/footer') %>

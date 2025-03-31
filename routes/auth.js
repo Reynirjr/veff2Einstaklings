@@ -9,10 +9,6 @@ router.get('/logout', (req, res) => {
   res.clearCookie('token');
   res.redirect('/');
 });
-router.get('/groups', authMiddleware, (req, res) => {
-
-  res.render('groups', { userId: req.user.id });
-});
 
 router.get('/signup', authController.getSignup);
 

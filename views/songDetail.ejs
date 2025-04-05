@@ -1,0 +1,12 @@
+<%- include('partials/header') %>
+
+<main>
+  <h1><%= song.title %></h1>
+  <h2>by <%= song.artist %></h2>
+  
+  <p>Submitted by: <%= song.submitter ? song.submitter.username : 'Unknown' %></p>
+  
+  <a href="/groups/<%= song.groupId %>">Back to Group</a>
+</main>
+
+<%- include('partials/footer') %>

@@ -1,8 +1,211 @@
-<%- include ('partials/header') %>
+<%- include('partials/header') %>
 
-<main>
-    <h1>Lög</h1>
-    <p>Hér munu lög birtast</p>
+<main class="song-detail-page">
+  <div class="song-header">
+    <h1><%= song.title %></h1>
+    <h2>By <%= song.artist %></h2>
+    <p>Submitted by: <%= song.submitter.username %></p>
+  </div>
+  
+  <div class="video-container">
+    <iframe 
+      width="560" 
+      height="315" 
+      src="https://www.youtube.com/embed/<%= youtubeVideoId %>" 
+      frameborder="0" 
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+      allowfullscreen>
+    </iframe>
+  </div>
+  
+  <% if (canVote) { %>
+    <div class="voting-section">
+      <% if (song.Group.votingMethod === 'single_vote') { %>
+        <form action="/songs/<%= song.id %>/vote" method="POST">
+          <input type="hidden" name="voteType" value="single">
+          <input type="hidden" name="returnTo" value="/groups/<%= song.groupId %>/voting">
+          <button type="submit" class="vote-button <%= userVote ? 'voted' : '' %>">
+            <%= userVote ? 'Change Vote to This Song' : 'Vote for This Song' %>
+          </button>
+        </form>
+      
+      <% } else if (song.Group.votingMethod === 'top_3') { %>
+        <% if (availableRanks.length > 0) { %>
+          <form action="/songs/<%= song.id %>/vote" method="POST" class="rank-form">
+            <h3>Choose a ranking for this song:</h3>
+            <div class="rank-options">
+              <select name="rank" required>
+                <option value="">-- Select rank --</option>
+                <% availableRanks.forEach(rank => { %>
+                  <option value="<%= rank %>">#<%= rank %> (<%= 4-rank %> points)</option>
+                <% }); %>
+              </select>
+            </div>
+            <input type="hidden" name="returnTo" value="/groups/<%= song.groupId %>/voting">
+            <button type="submit">Submit Ranking</button>
+          </form>
+        <% } else { %>
+          <p class="no-ranks">You've already ranked your top 3 songs. To change your rankings, go back to the voting page.</p>
+        <% } %>
+      
+      <% } else if (song.Group.votingMethod === 'rating') { %>
+        <form action="/songs/<%= song.id %>/vote" method="POST" class="rating-form">
+          <h3>Rate this song (1-10):</h3>
+          <div class="rating-stars">
+            <% for (let i = 1; i <= 10; i++) { %>
+              <input type="radio" name="rating" id="rating-<%= i %>" value="<%= i %>" <%= userVote && userVote.value === i ? 'checked' : '' %>>
+              <label for="rating-<%= i %>"><%= i %></label>
+            <% } %>
+          </div>
+          <input type="hidden" name="returnTo" value="/groups/<%= song.groupId %>/voting">
+          <button type="submit">Submit Rating</button>
+        </form>
+      <% } %>
+    </div>
+  <% } else if (song.submittedBy === userId) { %>
+    <div class="own-song-notice">
+      <p>This is your submitted song. You can't vote for your own song.</p>
+    </div>
+  <% } else if (phase !== 'voting') { %>
+    <div class="voting-closed">
+      <p>Voting is not currently open for this round.</p>
+    </div>
+  <% } %>
+  
+  <div class="navigation">
+    <a href="/groups/<%= song.groupId %>/voting" class="button">Back to Voting Page</a>
+    <a href="/groups/<%= song.groupId %>" class="button">Back to Group</a>
+  </div>
 </main>
 
-<%- include ('partials/footer') %>
+<style>
+  .song-detail-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .song-header {
+    margin-bottom: 30px;
+  }
+  
+  .song-header h1 {
+    margin-bottom: 5px;
+  }
+  
+  .song-header h2 {
+    color: #666;
+    font-size: 1.2em;
+    margin-top: 0;
+  }
+  
+  .video-container {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    height: 0;
+    overflow: hidden;
+    margin-bottom: 30px;
+  }
+  
+  .video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .voting-section {
+    background-color: #f5f5f5;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+  }
+  
+  .voting-section h3 {
+    margin-top: 0;
+  }
+  
+  .vote-button {
+    background-color: #1976d2;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.2s;
+  }
+  
+  .vote-button:hover {
+    background-color: #1565c0;
+  }
+  
+  .vote-button.voted {
+    background-color: #4caf50;
+  }
+  
+  .rating-form .rating-stars {
+    display: flex;
+    gap: 5px;
+    margin: 15px 0;
+  }
+  
+  .rating-form input[type="radio"] {
+    display: none;
+  }
+  
+  .rating-form label {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    background-color: #e0e0e0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .rating-form input[type="radio"]:checked + label {
+    background-color: #ffc107;
+    color: black;
+  }
+  
+  .rank-form select {
+    padding: 8px;
+    font-size: 16px;
+    margin: 10px 0;
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  .navigation {
+    display: flex;
+    gap: 15px;
+  }
+  
+  .button {
+    display: inline-block;
+    background-color: #f0f0f0;
+    color: #333;
+    padding: 10px 15px;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  }
+  
+  .button:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .own-song-notice, .voting-closed, .no-ranks {
+    padding: 15px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 4px;
+    margin-bottom: 30px;
+  }
+</style>
+
+<%- include('partials/footer') %>

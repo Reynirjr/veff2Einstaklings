@@ -1,0 +1,137 @@
+<%- include('partials/header') %>
+
+<main>
+  <h1>Round #<%= round.roundNumber %> - <%= round.Group.name %></h1>
+  
+  <div class="round-details">
+    <p><strong>Theme:</strong> <%= round.theme || 'No specific theme' %></p>
+    
+    <div class="schedule">
+      <h2>Schedule</h2>
+      <p><strong>Song Submission:</strong> <%= round.inputOpen.toLocaleString() %> - <%= round.inputClose.toLocaleString() %></p>
+      <p><strong>Voting:</strong> <%= round.votingOpen.toLocaleString() %> - <%= round.votingClose.toLocaleString() %></p>
+      
+      <div class="status-indicator <%= phase %>">
+        <% if (phase === 'pending') { %>
+          <p>Round will start soon</p>
+        <% } else if (phase === 'input') { %>
+          <p>Song submission is open!</p>
+        <% } else if (phase === 'voting') { %>
+          <p>Voting is now open!</p>
+        <% } else { %>
+          <p>This round has ended</p>
+        <% } %>
+      </div>
+    </div>
+    
+    <% if (phase === 'input') { %>
+      <div class="song-submission">
+        <h2>Submit Your Song</h2>
+        <% if (userSubmittedSong) { %>
+          <div class="already-submitted">
+            <p>You've already submitted: <strong><%= userSubmittedSong.title %></strong> by <%= userSubmittedSong.artist %></p>
+          </div>
+        <% } else { %>
+          <form action="/rounds/<%= round.id %>/songs" method="POST">
+            <div>
+              <label for="title">Song Title:</label>
+              <input type="text" name="title" id="title" required>
+            </div>
+            
+            <div>
+              <label for="artist">Artist:</label>
+              <input type="text" name="artist" id="artist" required>
+            </div>
+            
+            <button type="submit" class="button">Submit Song</button>
+          </form>
+        <% } %>
+      </div>
+    <% } %>
+    
+    <% if (phase === 'voting' || phase === 'finished') { %>
+      <div class="songs-section">
+        <h2>Songs</h2>
+        <% if (songsWithVotes && songsWithVotes.length > 0) { %>
+          <ul class="songs-list">
+            <% songsWithVotes.forEach((song, index) => { %>
+              <li class="song-item">
+                <div class="song-info">
+                  <span class="rank">#<%= index + 1 %></span>
+                  <strong><%= song.title %></strong> - <%= song.artist %>
+                  <% if (phase === 'finished') { %>
+                    <span class="submitted-by">Added by: <%= song.submitter.username %></span>
+                  <% } %>
+                </div>
+                <div class="song-votes">
+                  <span class="vote-count"><%= song.voteCount %> votes</span>
+                  <% if (phase === 'voting' && song.submittedBy !== userId) { %>
+                    <form action="/songs/<%= song.id %>/vote" method="POST" class="vote-form">
+                      <button type="submit" class="vote-button <%= song.userHasVoted ? 'voted' : '' %>">
+                        <%= song.userHasVoted ? '★' : '☆' %>
+                      </button>
+                    </form>
+                  <% } %>
+                </div>
+              </li>
+            <% }); %>
+          </ul>
+        <% } else { %>
+          <p>No songs have been submitted yet.</p>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+  
+  <div class="actions">
+    <a href="/groups/<%= round.Group.id %>" class="button">Back to Group</a>
+  </div>
+</main>
+
+<style>
+  /* ...reuse existing styles from group.ejs... */
+  
+  .status-indicator {
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    text-align: center;
+    font-weight: bold;
+  }
+  
+  .status-indicator.pending {
+    background-color: #e0e0e0;
+    color: #555;
+  }
+  
+  .status-indicator.input {
+    background-color: #e3f2fd;
+    color: #0d47a1;
+  }
+  
+  .status-indicator.voting {
+    background-color: #e8f5e9;
+    color: #1b5e20;
+  }
+  
+  .status-indicator.finished {
+    background-color: #f5f5f5;
+    color: #333;
+  }
+  
+  .already-submitted {
+    background-color: #e8f5e9;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+  
+  .schedule {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+</style>
+
+<%- include('partials/footer') %>

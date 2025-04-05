@@ -1,63 +1,31 @@
-:root {
-  /* Þema: Modern retro with rounded edges and subtle music motifs */
-
-  /* Primary Colors */
-  --electric-purple: #6C5CE7; /* For buttons, headers, accents */
-  --coral-pink: #FF7675;     /* For highlights and interactive elements */
-  --dark-charcoal: #2D3436;  /* Background/Text */
-
-  /* Secondary Colors */
-  --soft-purple: #A66EFA;    /* Soft Purple Gradient */
-  --warm-yellow: #FFEAA7;    /* For notifications/warnings */
-
-  /* Gradients */
-  --hero-gradient: linear-gradient(45deg, #6C5CE7, #A66EFA);
-
-  /* Fonts */
-  --header-font: 'Bebas Neue', sans-serif;      /* For main headers */
-  --subheader-font: 'Futura PT', sans-serif;      /* For subheaders */
-  --body-font: 'Montserrat', sans-serif;          /* For body text */
-  --decorative-font: 'Lobster', cursive;          /* For decorative elements */
-
-  --radius-buttons-cards: 8px;
-  --radius-containers: 16px;
-
-  --icon-equalizer: url('/path/to/equalizer-icon.svg'); /* Equalizer bars */
-  --icon-vinyl: url('/path/to/vinyl-icon.svg');         /* Vinyl record */
-  --icon-speaker: url('/path/to/speaker-icon.svg');     /* Speaker icon */
-
-  /* Motion Effects */
-  --hover-scale: 1.05; /* Smooth hover effect scaling */
-
-  /* Figma Components */
-  /* Login/Register Page */
-  --login-bg: #2D3436; /* Dark charcoal background */
-  --login-gradient-overlay: var(--hero-gradient);
-  --login-form-border: var(--electric-purple); /* Purple accent */
-
-  /* Input Fields */
-  --input-bg: #ffffff;
-  --input-placeholder-font: 'Montserrat', sans-serif;
-
-  /* Group Dashboard */
-  --group-card-gradient: linear-gradient(45deg, #6C5CE7, #A66EFA); /* Gradient card background */
-  --group-create-fab-bg: #FF7675; /* Floating action button (FAB) in coral pink */
-}
-
-
-*{
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
 body {
-    font-family: 'Helvetica', sans-serif;
-    background-color: var(--dark-charcoal);
-    margin: 0;
-    padding: 0;
-  }
-  h1 {
-    color: #333;
-  }
-  
+  font-family: var(--body-font), 'Helvetica', sans-serif;
+  background: linear-gradient(to bottom, #a1dbff, #e8f5ff);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh; 
+  background-attachment: fixed; 
+  position: relative;
+}
+
+body:before {
+  content: '';
+  position: fixed;
+  top: 15%;
+  left: 10%;
+  width: 150px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 50px;
+  filter: blur(5px);
+  z-index: -1;
+  box-shadow: 
+    200px 40px 0 rgba(255, 255, 255, 0.5),
+    400px 100px 0 rgba(255, 255, 255, 0.6),
+    100px 200px 0 rgba(255, 255, 255, 0.4);
+}
+
+h1 {
+  color: #0f3c5c; 
+  font-family: var(--header-font);
+}

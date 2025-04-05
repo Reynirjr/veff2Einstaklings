@@ -28,6 +28,16 @@ const Group = sequelize.define('Group', {
     allowNull: false,
     defaultValue: 'friday'
   },
+  inputOpenTime: {
+    type: DataTypes.TIME, 
+    allowNull: false,
+    defaultValue: '00:00:00'
+  },
+  inputCloseTime: {
+    type: DataTypes.TIME,
+    allowNull: false,
+    defaultValue: '07:59:59'
+  },
   votingOpenTime: {
     type: DataTypes.TIME, 
     allowNull: false,
@@ -50,6 +60,23 @@ const Group = sequelize.define('Group', {
     type: DataTypes.STRING,
     allowNull: true,  
   },
+  votingMethod: {
+    type: DataTypes.ENUM('single_vote', 'top_3', 'rating'),
+    allowNull: false,
+    defaultValue: 'single_vote',
+  },
+  tiebreakInProgress: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  tiebreakSongs: {
+    type: DataTypes.JSON,
+    allowNull: true
+  },
+  tiebreakEndTime: {
+    type: DataTypes.DATE,
+    allowNull: true
+  }
 }, {
   timestamps: true,
 });
@@ -65,6 +92,16 @@ Group.associate = (models) => {
     foreignKey: 'groupId',
     otherKey: 'userId',
     as: 'members',
+  });
+  
+  Group.hasMany(models.Song, {
+    foreignKey: 'groupId',
+    as: 'songs'
+  });
+
+  Group.hasMany(models.Round, {
+    foreignKey: 'groupId',
+    as: 'rounds'
   });
 };
 

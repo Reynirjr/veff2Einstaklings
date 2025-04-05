@@ -2,9 +2,12 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcrypt');
+const { Op } = require('sequelize');
 
+const sequelize = require('../config/database');
 const authMiddleware = require('../middleware/authmiddleware'); 
-const { Group, User, GroupUser } = require('../models');
+const { Group, User, GroupUser, Song, Vote, Round } = require('../models');
+const { getNextVotingDate } = require('../utils/dateUtils');
 
 const createGroupLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
@@ -59,13 +62,17 @@ router.post('/groups', authMiddleware, createGroupLimiter, async (req, res) => {
     const {
       name,
       description,
-      votingDay,
+      inputStartDate,
+      inputOpenTime,
+      inputCloseTime,
+      votingStartDate,
       votingOpenTime,
       votingCloseTime,
       votingRecurrence,
       theme,
       themeOption,
       groupPassword,
+      votingMethod = 'single_vote',
     } = req.body;
 
     let finalTheme = theme;
@@ -74,13 +81,15 @@ router.post('/groups', authMiddleware, createGroupLimiter, async (req, res) => {
         'Rokk Klassík',
         '80\'s Popp', 
         'Hip-Hop Smellir', 
-        'Akústískar Útgáfur', 
-        'Eurovision Goðsagnir',
+        'Suður amerísk Tónlist', 
+        'Eurovision',
         'Íslensk Tónlist',
         'Kvikmyndatónlist',
         'Jólatónlist',
         'Sumarsmellir',
-        'K-pop'
+        'Country Classics',
+        'Rock Legends',
+        'Indie Gems'
       ];
       finalTheme = randomThemes[Math.floor(Math.random() * randomThemes.length)];
     }
@@ -95,12 +104,15 @@ router.post('/groups', authMiddleware, createGroupLimiter, async (req, res) => {
       name,
       description,
       created_by: userId,
-      votingDay,
+      votingDay: new Date(votingStartDate).toLocaleString('en-us', {weekday: 'long'}).toLowerCase(),
+      inputOpenTime,
+      inputCloseTime,
       votingOpenTime,
       votingCloseTime,
       votingRecurrence,
       theme: finalTheme,
       passwordHash,
+      votingMethod,
     });
 
     await GroupUser.create({
@@ -109,6 +121,41 @@ router.post('/groups', authMiddleware, createGroupLimiter, async (req, res) => {
       role: 'admin'
     });
 
+    const inputStart = new Date(inputStartDate);
+    const inputEnd = new Date(inputStartDate);
+    const votingStart = new Date(votingStartDate);
+    const votingEnd = new Date(votingStartDate);
+    
+    const [inputOpenHour, inputOpenMin] = inputOpenTime.split(':').map(Number);
+    const [inputCloseHour, inputCloseMin] = inputCloseTime.split(':').map(Number);
+    const [votingOpenHour, votingOpenMin] = votingOpenTime.split(':').map(Number);
+    const [votingCloseHour, votingCloseMin] = votingCloseTime.split(':').map(Number);
+    
+    inputStart.setHours(inputOpenHour, inputOpenMin, 0, 0);
+    inputEnd.setHours(inputCloseHour, inputCloseMin, 0, 0);
+    votingStart.setHours(votingOpenHour, votingOpenMin, 0, 0);
+    votingEnd.setHours(votingCloseHour, votingCloseMin, 0, 0);
+    
+    const now = new Date();
+    let initialStatus = 'pending';
+    if (now >= inputStart && now < inputEnd) {
+      initialStatus = 'input';
+    } else if (now >= votingStart && now < votingEnd) {
+      initialStatus = 'voting';
+    }
+    
+    const round = await Round.create({
+      groupId: group.id,
+      roundNumber: 1,
+      inputOpen: inputStart,
+      inputClose: inputEnd,
+      votingOpen: votingStart,
+      votingClose: votingEnd,
+      theme: finalTheme,
+      status: initialStatus
+    });
+
+    req.flash('success', 'Group created successfully! You can now add songs or invite members.');
     return res.redirect(`/groups/${group.id}`);
   } catch (err) {
     console.error(err);
@@ -120,21 +167,111 @@ router.get('/groups/:id', authMiddleware, async (req, res) => {
   try {
     const groupId = req.params.id;
     const userId = req.user.id;
-    
+
     const group = await Group.findByPk(groupId, {
       include: [
         { model: User, as: 'creator' },
-        { model: User, as: 'members' }
+        { model: User, as: 'members' },
+        { 
+          model: Round, 
+          as: 'rounds',
+          include: [
+            {
+              model: Song,
+              as: 'songs',
+              include: [
+                { model: User, as: 'submitter', attributes: ['username'] },
+                { model: Vote, as: 'votes' }
+              ]
+            }
+          ]
+        }
       ]
     });
-    
+
     if (!group) {
       return res.status(404).send('Group not found');
     }
+
+    let currentRound = null;
+    let phase = null;
+    let userSubmittedSong = null;
+    let songsWithVotes = [];
     
+    if (group.rounds && group.rounds.length > 0) {
+      group.rounds.sort((a, b) => b.roundNumber - a.roundNumber);
+      currentRound = group.rounds[0];
+      
+      const now = new Date();
+      if (now < currentRound.inputOpen) {
+        phase = 'pending';
+      } else if (now >= currentRound.inputOpen && now <= currentRound.inputClose) {
+        phase = 'input';
+      } else if (now >= currentRound.votingOpen && now <= currentRound.votingClose) {
+        phase = 'voting';
+      } else {
+        phase = 'finished';
+      }
+      
+      if (currentRound.songs && currentRound.songs.length > 0) {
+        userSubmittedSong = currentRound.songs.find(song => song.submittedBy === userId);
+        
+        if (phase === 'voting' || phase === 'finished') {
+          songsWithVotes = await Song.findAll({
+            where: { roundId: currentRound.id },
+            include: [
+              { model: User, as: 'submitter', attributes: ['username'] },
+              { model: Vote, as: 'votes' }
+            ],
+            attributes: [
+              'id', 'title', 'artist', 'submittedBy', 'createdAt',
+              [sequelize.fn('COUNT', sequelize.col('votes.id')), 'voteCount'],
+              [sequelize.literal(`EXISTS(SELECT 1 FROM "Votes" WHERE "Votes"."songId" = "Song"."id" AND "Votes"."userId" = ${userId})`), 'userHasVoted']
+            ],
+            group: ['Song.id', 'submitter.id', 'votes.id'],
+            order: [[sequelize.fn('COUNT', sequelize.col('votes.id')), 'DESC']]
+          });
+        }
+      }
+    }
+
+    const isAdmin = await GroupUser.findOne({ 
+      where: { 
+        groupId, 
+        userId, 
+        role: 'admin' 
+      } 
+    });
+
     const isMember = group.members.some(member => member.id === userId);
     
-    res.render('group', { group, isMember });
+    const votingDay = group.votingDay;
+    const votingStartDate = getNextVotingDate(votingDay, group.votingOpenTime);
+    const votingEndDate = new Date(votingStartDate);
+    
+    const closeTime = group.votingCloseTime.substring(0, 5); 
+    const [closeHour, closeMin] = closeTime.split(':').map(Number);
+    votingEndDate.setHours(closeHour, closeMin, 0, 0);
+    
+    if (votingEndDate < votingStartDate) {
+      votingEndDate.setDate(votingEndDate.getDate() + 1);
+    }
+    
+    res.render('group', { 
+      group, 
+      isMember, 
+      userId,
+      isAdmin: !!isAdmin,
+      currentRound,
+      phase,
+      userSubmittedSong,
+      rounds: group.rounds || [],
+      songsWithVotes: songsWithVotes.map(song => song.get({ plain: true })),
+      successMessage: req.flash('success'),
+      errorMessage: req.flash('error'),
+      votingStart: votingStartDate.getTime(),
+      votingEnd: votingEndDate.getTime()
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send('Error loading group');
@@ -179,6 +316,103 @@ router.post('/groups/:id/join', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send('Error joining group');
+  }
+});
+
+router.post('/groups/:id/songs', authMiddleware, async (req, res) => {
+  try {
+    const groupId = req.params.id;
+    const userId = req.user.id;
+
+    const membership = await GroupUser.findOne({ where: { groupId, userId } });
+    if (!membership) {
+      return res.status(403).send('YÞú ert ekki meðlimur í þessum hóp.');
+    }
+
+    const { title, artist } = req.body;
+    
+  
+    await Song.create({
+      title,
+      artist,
+      groupId,      
+      submittedBy: userId,
+    });
+
+    res.redirect(`/groups/${groupId}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error adding song');
+  }
+});
+
+router.post('/songs/:songId/vote', authMiddleware, async (req, res) => {
+  try {
+    const songId = req.params.songId;
+    const userId = req.user.id;
+    
+    const song = await Song.findByPk(songId);
+    if (!song) {
+      return res.status(404).send('Song not found');
+    }
+    
+    const membership = await GroupUser.findOne({ 
+      where: { 
+        groupId: song.groupId, 
+        userId 
+      }
+    });
+    
+    if (!membership) {
+      return res.status(403).send('You are not a member of this group.');
+    }
+
+    const existingVote = await Vote.findOne({ 
+      where: { 
+        songId, 
+        userId 
+      }
+    });
+    
+    if (existingVote) {
+      await existingVote.destroy();
+    } else {
+      await Vote.create({ 
+        songId, 
+        userId, 
+        value: 1 
+      });
+    }
+
+    res.redirect(`/groups/${song.groupId}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error processing vote');
+  }
+});
+
+router.post('/groups/:id/delete', authMiddleware, async (req, res) => {
+  try {
+    const groupId = req.params.id;
+    const userId = req.user.id;
+    
+    const group = await Group.findByPk(groupId);
+    if (!group) {
+      return res.status(404).send('Group not found');
+    }
+    
+    if (group.created_by !== userId) {
+      return res.status(403).send('You do not have permission to delete this group');
+    }
+    
+    await GroupUser.destroy({ where: { groupId } });
+
+    await group.destroy();
+    
+    res.redirect('/groups');
+  } catch (err) {
+    console.error('Error deleting group:', err);
+    res.status(500).send('Error deleting group');
   }
 });
 

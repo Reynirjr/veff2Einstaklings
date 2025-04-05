@@ -7,22 +7,40 @@ const Vote = sequelize.define('Vote', {
     primaryKey: true,
     autoIncrement: true,
   },
-  song_id: {
+  value: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    defaultValue: 1,
   },
-  user_id: {
+  userId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: 'Users',
+      key: 'id'
+    }
   },
+  songId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'Songs',
+      key: 'id'
+    }
+  }
 }, {
   timestamps: true,
   indexes: [
     {
       unique: true,
-      fields: ['song_id', 'user_id']
+      fields: ['userId', 'songId']
     }
   ]
 });
+
+Vote.associate = (models) => {
+  Vote.belongsTo(models.User, { foreignKey: 'userId', as: 'voter' });
+  Vote.belongsTo(models.Song, { foreignKey: 'songId', as: 'song' });
+};
 
 module.exports = Vote;

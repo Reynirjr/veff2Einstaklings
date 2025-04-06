@@ -26,7 +26,7 @@
         <% } else if (group.votingMethod === 'top_3') { %>
           Top 3 Weighted
         <% } else if (group.votingMethod === 'rating') { %>
-          Rating (1-5)
+          Rating (1-10)
         <% } %>
       </p>
     </div>
@@ -150,8 +150,10 @@
                         <span class="rank"><%= index + 1 %></span>
                         <span class="song-title"><%= song.title %></span>
                         <span class="song-artist">by <%= song.artist %></span>
-                        <span class="rating-average"><%= parseFloat(song.averageRating).toFixed(1) %> / 10</span>
-                        <span class="rating-count">(<%= song.voteCount %> ratings)</span>
+                        <span class="rating-average">
+                          <%= song.averageRating ? parseFloat(song.averageRating).toFixed(1) : 'No' %>/10
+                        </span>
+                        <span class="rating-count">(<%= song.voteCount %> <%= song.voteCount === 1 ? 'rating' : 'ratings' %>)</span>
                       </div>
                     <% }); %>
                   <% } %>
@@ -224,6 +226,36 @@
         <li><%= member.username %> <%= member.GroupUser.role === 'admin' ? '(Admin)' : '' %></li>
       <% }); %>
     </ul>
+
+    <section class="leaderboard-section">
+      <h2>Leaderboard</h2>
+      <% if (leaderboard && leaderboard.length > 0) { %>
+        <div class="leaderboard">
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Member</th>
+                <th>Rounds Won</th>
+                <th>Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% leaderboard.forEach((entry, index) => { %>
+                <tr class="<%= entry.userId === userId ? 'current-user' : '' %>">
+                  <td><%= index + 1 %></td>
+                  <td><%= entry.username %></td>
+                  <td><%= entry.roundsWon %></td>
+                  <td><%= entry.score %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <p>No rounds have been won yet. Win a round to get on the leaderboard!</p>
+      <% } %>
+    </section>
   </div>
   
   <div class="actions">
@@ -244,16 +276,41 @@
     <% } else { %>
       <p>Þu ert Meðlimur.</p>
       
-      <% if (group.created_by === userId) { %>
-        <form id="deleteForm" action="/groups/<%= group.id %>/delete" method="POST">
-          <input type="hidden" name="_method" value="DELETE">
-          <button type="button" id="deleteButton" class="button danger">Eyða hóp</button>
-        </form>
+      <% if (group.created_by === userId || isAdmin) { %>
+        <a href="/groups/<%= group.id %>/admin" class="button admin">Group Admin Panel</a>
+        
+        <% if (group.created_by === userId) { %>
+          <form id="deleteForm" action="/groups/<%= group.id %>/delete" method="POST">
+            <input type="hidden" name="_method" value="DELETE">
+            <button type="button" id="deleteButton" class="button danger">Eyða hóp</button>
+          </form>
+        <% } %>
       <% } %>
     <% } %>
     
     <a href="/groups" class="button">Back to Groups</a>
   </div>
+
+  <% if (isWinner && !nextThemeSelected) { %>
+    <div id="winnerModal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <div class="winner-trophy">🏆</div>
+        <h2>Congratulations!</h2>
+        <p>Your song "<strong><%= winningRound.winningSong.title %></strong>" by <%= winningRound.winningSong.artist %> won the round!</p>
+        
+        <div class="theme-selector">
+          <h3>Choose a theme for the next round:</h3>
+          <form action="/rounds/<%= winningRound.id %>/theme" method="POST">
+            <input type="text" name="theme" required placeholder="e.g. 80's Hits, Movie Soundtracks, etc.">
+            <button type="submit" class="submit-theme">Set Theme</button>
+          </form>
+        </div>
+        
+        <p class="small">As the winner, you get to choose the theme for the next round!</p>
+      </div>
+    </div>
+  <% } %>
 </main>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -330,6 +387,28 @@
       const intervalId = setInterval(updateCountdown, 1000);
     }
      } 
+
+    // Modal handling
+    const winnerModal = document.getElementById('winnerModal');
+    if (winnerModal) {
+      const closeBtn = winnerModal.querySelector('.close');
+      closeBtn.addEventListener('click', function() {
+        winnerModal.style.display = 'none';
+      });
+      
+      window.addEventListener('click', function(event) {
+        if (event.target === winnerModal) {
+          winnerModal.style.display = 'none';
+        }
+      });
+      
+      // Auto-close after 5 minutes if no action taken
+      setTimeout(function() {
+        if (winnerModal && winnerModal.style.display !== 'none') {
+          winnerModal.style.display = 'none';
+        }
+      }, 5 * 60 * 1000);
+    }
   });
 </script>
 
@@ -736,10 +815,141 @@
     margin-left: 5px;
   }
   
+  .button.admin {
+    background-color: #5c6bc0;
+    color: white;
+    margin-bottom: 10px;
+  }
+  
+  .button.admin:hover {
+    background-color: #3f51b5;
+  }
+  
   @media (max-width: 768px) {
     .members-list {
       columns: 1;
     }
+  }
+
+  /* Leaderboard styles */
+  .leaderboard-section {
+    margin: 30px 0;
+  }
+  
+  .leaderboard table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  
+  .leaderboard th, .leaderboard td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .leaderboard th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .leaderboard tr:last-child td {
+    border-bottom: none;
+  }
+  
+  .leaderboard tr.current-user {
+    background-color: #e3f2fd;
+    font-weight: bold;
+  }
+  
+  /* Modal styles */
+  .modal {
+    display: block;
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+  }
+  
+  .modal-content {
+    background-color: white;
+    margin: 10% auto;
+    padding: 30px;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    text-align: center;
+    animation: modalSlideIn 0.3s ease-out;
+  }
+  
+  @keyframes modalSlideIn {
+    from {transform: translateY(-50px); opacity: 0;}
+    to {transform: translateY(0); opacity: 1;}
+  }
+  
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .close:hover {
+    color: #333;
+  }
+  
+  .winner-trophy {
+    font-size: 50px;
+    margin-bottom: 10px;
+    animation: trophyBounce 1s infinite alternate;
+  }
+  
+  @keyframes trophyBounce {
+    from {transform: scale(1);}
+    to {transform: scale(1.1);}
+  }
+  
+  .theme-selector {
+    margin: 20px 0;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+  }
+  
+  .theme-selector input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  
+  .submit-theme {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .submit-theme:hover {
+    background-color: #45a049;
+  }
+  
+  p.small {
+    font-size: 0.9em;
+    color: #666;
   }
 </style>
 

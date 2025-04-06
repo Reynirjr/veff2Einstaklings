@@ -200,4 +200,45 @@ router.post('/groups/:groupId/rounds', authMiddleware, async (req, res) => {
     }
 });
 
+router.post('/rounds/:id/theme', authMiddleware, async (req, res) => {
+    try {
+        const roundId = req.params.id;
+        const userId = req.user.id;
+        const { theme } = req.body;
+        
+        const round = await Round.findByPk(roundId, {
+            include: [{ model: Group, as: 'group' }]
+        });
+        
+        if (!round) {
+            return res.status(404).render('error', { message: 'Round not found' });
+        }
+        
+        // Check if this user is the winner
+        if (round.winnerId !== userId) {
+            return res.status(403).render('error', { message: 'Only the round winner can set the theme' });
+        }
+        
+        // Check if theme is already set
+        if (round.nextThemeSelected) {
+            return res.status(400).render('error', { message: 'Theme has already been set' });
+        }
+        
+        // Update the group theme
+        const group = round.group;
+        group.theme = theme;
+        await group.save();
+        
+        // Mark theme as selected
+        round.nextThemeSelected = true;
+        await round.save();
+        
+        req.flash('success', 'You have set the theme for the next round!');
+        res.redirect(`/groups/${round.groupId}`);
+    } catch (error) {
+        console.error('Error setting round theme:', error);
+        res.status(500).render('error', { message: 'Error setting round theme' });
+    }
+});
+
 module.exports = router;

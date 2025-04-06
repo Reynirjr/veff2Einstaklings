@@ -1,4 +1,4 @@
-const { Song, User, Group, Vote, Round } = require('../models');
+const { Song, User, Group, Vote, Round, UserScore, sequelize } = require('../models');
 const { Op } = require('sequelize'); // Add this line
 
 exports.list = async (req, res) => {
@@ -19,11 +19,92 @@ exports.list = async (req, res) => {
 
 exports.finalizeVoting = async (req, res) => {
   try {
-
-    res.redirect('/groups/' + winningSong.groupId);
+    const roundId = req.params.roundId;
+    
+    const round = await Round.findByPk(roundId, {
+      include: [{ model: Group, as: 'group' }]
+    });
+    
+    if (!round) {
+      return res.status(404).render('error', { message: 'Round not found' });
+    }
+    
+    if (round.status !== 'voting') {
+      return res.status(400).render('error', { message: 'Voting is not active for this round' });
+    }
+    
+    // Find winning song based on voting method
+    const group = round.group;
+    let winningSong;
+    
+    if (group.votingMethod === 'rating') {
+      // For rating, find song with highest average rating
+      winningSong = await Song.findOne({
+        where: { roundId },
+        include: [
+          { model: User, as: 'submitter' },
+          { model: Vote, as: 'votes' }
+        ],
+        attributes: [
+          'id', 'title', 'artist', 'submittedBy',
+          [sequelize.fn('AVG', sequelize.col('votes.value')), 'averageRating'],
+          [sequelize.fn('COUNT', sequelize.col('votes.id')), 'voteCount']
+        ],
+        group: ['Song.id', 'submitter.id'],
+        order: [[sequelize.fn('AVG', sequelize.col('votes.value')), 'DESC']],
+        having: sequelize.literal('COUNT("votes"."id") > 0')
+      });
+    } else {
+      // For single vote or top 3, find song with most votes
+      winningSong = await Song.findOne({
+        where: { roundId },
+        include: [
+          { model: User, as: 'submitter' },
+          { model: Vote, as: 'votes' }
+        ],
+        attributes: [
+          'id', 'title', 'artist', 'submittedBy',
+          [sequelize.fn('COUNT', sequelize.col('votes.id')), 'voteCount']
+        ],
+        group: ['Song.id', 'submitter.id'],
+        order: [[sequelize.fn('COUNT', sequelize.col('votes.id')), 'DESC']]
+      });
+    }
+    
+    if (!winningSong) {
+      req.flash('error', 'No votes were cast in this round');
+      return res.redirect(`/groups/${round.groupId}`);
+    }
+    
+    // Update round with winner info
+    round.status = 'finished';
+    round.winnerId = winningSong.submittedBy;
+    round.winningSongId = winningSong.id;
+    await round.save();
+    
+    // Update user score
+    const [userScore, created] = await UserScore.findOrCreate({
+      where: {
+        userId: winningSong.submittedBy,
+        groupId: round.groupId
+      },
+      defaults: {
+        score: 1,
+        roundsWon: 1
+      }
+    });
+    
+    if (!created) {
+      userScore.score += 1;
+      userScore.roundsWon += 1;
+      await userScore.save();
+    }
+    
+    req.flash('success', 'Voting has been finalized!');
+    res.redirect(`/groups/${round.groupId}`);
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Error finalizing voting');
+    console.error('Error finalizing voting:', error);
+    res.status(500).render('error', { message: 'Error finalizing voting' });
   }
 };
 
@@ -84,6 +165,7 @@ exports.getSongDetail = async (req, res) => {
           userId: userId
         }
       });
+      console.log('User vote found:', userVote ? userVote.get({ plain: true }) : 'No vote');
     }
     
     let phase = 'voting';
@@ -199,6 +281,7 @@ exports.submitVote = async (req, res) => {
       const existingVote = await Vote.findOne({
         include: [{
           model: Song,
+          as: 'song', // Add this alias
           where: { roundId: song.roundId }
         }],
         where: { userId: userId }
@@ -243,8 +326,10 @@ exports.submitVote = async (req, res) => {
       }
     }
     
-    // Redirect back to the appropriate page
-    const redirectUrl = returnTo || `/groups/${song.groupId}/voting`;
+    console.log("Return to URL:", returnTo);
+    const redirectUrl = returnTo ? 
+      (returnTo.startsWith('/') ? returnTo : `/${returnTo}`) : 
+      `/groups/${song.groupId}/voting`;
     return res.redirect(redirectUrl);
   } catch (error) {
     console.error('Error submitting vote:', error);
@@ -297,7 +382,7 @@ exports.getGroupVoting = async (req, res) => {
     const processedSongs = songs.map(song => {
       const plainSong = song.get({ plain: true });
       plainSong.isWatched = viewedSongs.includes(song.id.toString());
-      plainSong.userVote = userVotes[song.id] || null;
+      plainSong.userVote = userVotes[song.id] !== undefined ? userVotes[song.id] : null;
       return plainSong;
     });
     

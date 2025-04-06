@@ -6,7 +6,7 @@ const { Op } = require('sequelize');
 
 const sequelize = require('../config/database');
 const authMiddleware = require('../middleware/authmiddleware'); 
-const { Group, User, GroupUser, Song, Vote, Round } = require('../models');
+const { Group, User, GroupUser, Song, Vote, Round, UserScore } = require('../models');
 const { getNextVotingDate } = require('../utils/dateUtils');
 
 const createGroupLimiter = rateLimit({
@@ -215,25 +215,29 @@ router.get('/groups/:id', authMiddleware, async (req, res) => {
             where: { roundId: currentRound.id },
             include: [
               { model: User, as: 'submitter', attributes: ['username'] },
-              { model: Vote, as: 'votes' }
+              { model: Vote, as: 'votes', attributes: [] }
             ],
             attributes: [
               'id', 'title', 'artist', 'submittedBy', 'createdAt',
               [sequelize.fn('COUNT', sequelize.col('votes.id')), 'voteCount'],
               [
-                group.votingMethod === 'rating' 
-                  ? sequelize.fn('AVG', sequelize.col('votes.value')) 
-                  : sequelize.literal('0'),
+                sequelize.fn('COALESCE', 
+                  sequelize.fn('AVG', sequelize.col('votes.value')), 
+                  0
+                ), 
                 'averageRating'
               ],
               [sequelize.literal(`EXISTS(SELECT 1 FROM "Votes" WHERE "Votes"."songId" = "Song"."id" AND "Votes"."userId" = ${userId})`), 'userHasVoted']
             ],
-            group: ['Song.id', 'submitter.id', 'votes.id'],
+            group: ['Song.id', 'submitter.id', 'submitter.username'],
             order: [
               group.votingMethod === 'rating'
-                ? [sequelize.literal('"averageRating"'), 'DESC'] // Add quotes to preserve case
+                ? [sequelize.literal('COALESCE(AVG("votes"."value"), 0) DESC')]
                 : [sequelize.fn('COUNT', sequelize.col('votes.id')), 'DESC']
-            ]
+            ],
+            subQuery: false,
+            includeIgnoreAttributes: false,
+            joinTableAttributes: [],
           });
         }
       }
@@ -260,6 +264,37 @@ router.get('/groups/:id', authMiddleware, async (req, res) => {
     if (votingEndDate < votingStartDate) {
       votingEndDate.setDate(votingEndDate.getDate() + 1);
     }
+
+    let isWinner = false;
+    let winningRound = null;
+    let nextThemeSelected = true;
+    
+    if (currentRound && currentRound.status === 'finished' && currentRound.winnerId === userId) {
+      isWinner = true;
+      winningRound = {
+        ...currentRound.get({ plain: true }),
+        winningSong: await Song.findByPk(currentRound.winningSongId, { 
+          attributes: ['id', 'title', 'artist'] 
+        })
+      };
+      nextThemeSelected = currentRound.nextThemeSelected;
+    }
+    
+    const leaderboard = await UserScore.findAll({
+      where: { groupId },
+      include: [{ model: User, attributes: ['username'] }],
+      order: [
+        ['score', 'DESC'],
+        ['roundsWon', 'DESC']
+      ]
+    });
+    
+    const processedLeaderboard = leaderboard.map(entry => ({
+      userId: entry.userId,
+      username: entry.User.username,
+      score: entry.score,
+      roundsWon: entry.roundsWon
+    }));
     
     res.render('group', { 
       group, 
@@ -274,7 +309,11 @@ router.get('/groups/:id', authMiddleware, async (req, res) => {
       successMessage: req.flash('success'),
       errorMessage: req.flash('error'),
       votingStart: votingStartDate.getTime(),
-      votingEnd: votingEndDate.getTime()
+      votingEnd: votingEndDate.getTime(),
+      isWinner,
+      winningRound,
+      nextThemeSelected,
+      leaderboard: processedLeaderboard
     });
   } catch (err) {
     console.error(err);
@@ -350,51 +389,6 @@ router.post('/groups/:id/songs', authMiddleware, async (req, res) => {
   }
 });
 
-router.post('/songs/:songId/vote', authMiddleware, async (req, res) => {
-  try {
-    const songId = req.params.songId;
-    const userId = req.user.id;
-    
-    const song = await Song.findByPk(songId);
-    if (!song) {
-      return res.status(404).send('Song not found');
-    }
-    
-    const membership = await GroupUser.findOne({ 
-      where: { 
-        groupId: song.groupId, 
-        userId 
-      }
-    });
-    
-    if (!membership) {
-      return res.status(403).send('You are not a member of this group.');
-    }
-
-    const existingVote = await Vote.findOne({ 
-      where: { 
-        songId, 
-        userId 
-      }
-    });
-    
-    if (existingVote) {
-      await existingVote.destroy();
-    } else {
-      await Vote.create({ 
-        songId, 
-        userId, 
-        value: 1 
-      });
-    }
-
-    res.redirect(`/groups/${song.groupId}`);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Error processing vote');
-  }
-});
-
 router.post('/groups/:id/delete', authMiddleware, async (req, res) => {
   try {
     const groupId = req.params.id;
@@ -417,6 +411,149 @@ router.post('/groups/:id/delete', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Error deleting group:', err);
     res.status(500).send('Error deleting group');
+  }
+});
+
+const adminMiddleware = async (req, res, next) => {
+  try {
+    const groupId = req.params.id;
+    const userId = req.user.id;
+    
+    const isAdmin = await GroupUser.findOne({ 
+      where: { groupId, userId, role: 'admin' }
+    });
+    
+    if (!isAdmin) {
+      req.flash('error', 'You must be an admin to access this page');
+      return res.redirect(`/groups/${groupId}`);
+    }
+    
+    next();
+  } catch (err) {
+    console.error('Admin middleware error:', err);
+    res.status(500).render('error', { message: 'Error checking admin status' });
+  }
+};
+
+// Admin panel route
+router.get('/groups/:id/admin', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const groupId = req.params.id;
+    
+    const group = await Group.findByPk(groupId, {
+      include: [
+        { model: User, as: 'creator' },
+        { 
+          model: User, 
+          as: 'members',
+          through: { attributes: ['role'] }
+        }
+      ]
+    });
+    
+    if (!group) {
+      return res.status(404).render('error', { message: 'Group not found' });
+    }
+    
+    res.render('groupAdmin', { 
+      group,
+      successMessage: req.flash('success'),
+      errorMessage: req.flash('error')
+    });
+  } catch (err) {
+    console.error('Error loading admin panel:', err);
+    res.status(500).render('error', { message: 'Error loading admin panel' });
+  }
+});
+
+// Update group settings
+router.post('/groups/:id/settings', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const groupId = req.params.id;
+    const {
+      name,
+      description,
+      theme,
+      groupPassword,
+      changePassword,
+      votingMethod,
+      votingDay,
+      inputOpenTime,
+      votingOpenTime,
+      votingCloseTime
+    } = req.body;
+    
+    const group = await Group.findByPk(groupId);
+    if (!group) {
+      return res.status(404).render('error', { message: 'Group not found' });
+    }
+    
+    // Update basic info
+    group.name = name || group.name;
+    group.description = description || group.description;
+    group.theme = theme || group.theme;
+    group.votingMethod = votingMethod || group.votingMethod;
+    
+    // Update schedule if provided
+    if (votingDay) group.votingDay = votingDay;
+    if (inputOpenTime) group.inputOpenTime = inputOpenTime;
+    if (votingOpenTime) group.votingOpenTime = votingOpenTime;
+    if (votingCloseTime) group.votingCloseTime = votingCloseTime;
+    
+    // Update password if requested
+    if (changePassword === 'true' && groupPassword) {
+      const salt = await bcrypt.genSalt(10);
+      group.passwordHash = await bcrypt.hash(groupPassword, salt);
+    } else if (changePassword === 'remove') {
+      group.passwordHash = null;
+    }
+    
+    await group.save();
+    
+    req.flash('success', 'Group settings updated successfully');
+    res.redirect(`/groups/${groupId}/admin`);
+  } catch (err) {
+    console.error('Error updating group settings:', err);
+    req.flash('error', 'Error updating group settings');
+    res.redirect(`/groups/${req.params.id}/admin`);
+  }
+});
+
+// Remove member from group
+router.post('/groups/:id/members/:userId/remove', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { id: groupId, userId: targetUserId } = req.params;
+    const adminId = req.user.id;
+    
+    // Prevent admins from removing themselves
+    if (parseInt(targetUserId) === adminId) {
+      req.flash('error', 'You cannot remove yourself from the group');
+      return res.redirect(`/groups/${groupId}/admin`);
+    }
+    
+    // Check if target is group creator
+    const group = await Group.findByPk(groupId);
+    if (parseInt(targetUserId) === group.created_by) {
+      req.flash('error', 'You cannot remove the group creator');
+      return res.redirect(`/groups/${groupId}/admin`);
+    }
+    
+    // Remove the user
+    const removed = await GroupUser.destroy({ 
+      where: { groupId, userId: targetUserId }
+    });
+    
+    if (removed) {
+      req.flash('success', 'Member removed successfully');
+    } else {
+      req.flash('error', 'Member not found');
+    }
+    
+    res.redirect(`/groups/${groupId}/admin`);
+  } catch (err) {
+    console.error('Error removing member:', err);
+    req.flash('error', 'Error removing member');
+    res.redirect(`/groups/${req.params.id}/admin`);
   }
 });
 

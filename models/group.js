@@ -83,6 +83,8 @@ module.exports = (sequelize, DataTypes) => {
     if (models.Round) {
       Group.hasMany(models.Round, { foreignKey: 'groupId', as: 'rounds' });
     }
+
+    Group.hasMany(models.UserScore, { foreignKey: 'groupId' });
   };
 
   return Group;

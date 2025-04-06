@@ -42,6 +42,26 @@ module.exports = (sequelize, DataTypes) => {
     votingClose: {
       type: DataTypes.DATE,
       allowNull: false
+    },
+    winnerId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Users',
+        key: 'id'
+      }
+    },
+    winningSongId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Songs',
+        key: 'id'
+      }
+    },
+    nextThemeSelected: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
     }
   }, {
     timestamps: true
@@ -50,6 +70,8 @@ module.exports = (sequelize, DataTypes) => {
   Round.associate = (models) => {
     Round.belongsTo(models.Group, { foreignKey: 'groupId', as: 'group' });
     Round.hasMany(models.Song, { foreignKey: 'roundId', as: 'songs' });
+    Round.belongsTo(models.User, { as: 'winner', foreignKey: 'winnerId' });
+    Round.belongsTo(models.Song, { as: 'winningSong', foreignKey: 'winningSongId' });
   };
 
   return Round;

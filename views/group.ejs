@@ -81,6 +81,14 @@
             <div id="countdown-timer" class="countdown-timer"></div>
           <% } %>
         </div>
+
+        <% if (phase === 'voting' && isMember) { %>
+          <div class="voting-button-container">
+            <a href="/groups/<%= group.id %>/voting" class="voting-button">
+              Go to Voting Page
+            </a>
+          </div>
+        <% } %>
         
         <% if (phase === 'input' && isMember) { %>
           <div class="submission-section">
@@ -118,142 +126,39 @@
         <% } %>
         
         <% if (phase === 'voting' || phase === 'finished') { %>
-          <div class="voting-button-container">
-            <a href="/groups/<%= group.id %>/voting" class="voting-button">
-              <% if (phase === 'voting') { %>
-                Go to Voting Page
-              <% } else { %>
-                View Results
-              <% } %>
-            </a>
-          </div>
-        <% } %>
-        
-        <% if (phase === 'voting' || phase === 'finished') { %>
           <div class="songs-section">
-            <h3><%= phase === 'voting' ? 'Current Standings' : 'Final Results' %></h3>
+            <h3><%= phase === 'voting' ? 'Voting in Progress' : 'Final Results' %></h3>
             
             <% if (songsWithVotes && songsWithVotes.length > 0) { %>
-              <% if (group.votingMethod === 'single_vote') { %>
-                <ul class="songs-list">
-                  <% songsWithVotes.forEach((song, index) => { %>
-                    <li class="song-item">
-                      <div class="song-info">
-                        <span class="rank">#<%= index + 1 %></span>
-                        <strong><%= song.title %></strong> - <%= song.artist %>
-                        <% if (phase === 'finished') { %>
-                          <span class="submitted-by">Added by: <%= song.submitter ? song.submitter.username : 'Unknown' %></span>
-                        <% } %>
-                      </div>
-                      <div class="song-votes">
+              <% if (phase === 'finished') { %>
+                <!-- Only show results after voting is finished -->
+                <div class="results-container">
+                  <% if (group.votingMethod === 'single_vote') { %>
+                    <!-- Single vote display -->
+                    <% songsWithVotes.forEach((song, index) => { %>
+                      <div class="song-result">
+                        <span class="rank"><%= index + 1 %></span>
+                        <span class="song-title"><%= song.title %></span>
+                        <span class="song-artist">by <%= song.artist %></span>
                         <span class="vote-count"><%= song.voteCount %> votes</span>
-                        <% if (phase === 'voting' && isMember && song.submittedBy !== userId) { %>
-                          <form action="/songs/<%= song.id %>/vote" method="POST" class="vote-form">
-                            <input type="hidden" name="voteType" value="single">
-                            <button type="submit" class="vote-button <%= song.userHasVoted ? 'voted' : '' %>">
-                              <%= song.userHasVoted ? '★' : '☆' %>
-                            </button>
-                          </form>
-                        <% } %>
                       </div>
-                    </li>
-                  <% }); %>
-                </ul>
-              <% } else if (group.votingMethod === 'top_3' && phase === 'voting' && isMember) { %>
-                <form action="/groups/<%= group.id %>/vote/top3" method="POST" class="top3-form">
-                  <h4>Select your top 3 songs:</h4>
-                  <div class="top3-selections">
-                    <div class="top3-selection">
-                      <label>1st place (3 points):</label>
-                      <select name="first" required>
-                        <option value="">-- Select song --</option>
-                        <% songsWithVotes.forEach(song => { %>
-                          <option value="<%= song.id %>" <%= song.submittedBy === userId ? 'disabled' : '' %>>
-                            <%= song.title %> - <%= song.artist %> <%= song.submittedBy === userId ? '(Your song)' : '' %>
-                          </option>
-                        <% }); %>
-                      </select>
-                    </div>
-                    <div class="top3-selection">
-                      <label>2nd place (2 points):</label>
-                      <select name="second" required>
-                        <option value="">-- Select song --</option>
-                        <% songsWithVotes.forEach(song => { %>
-                          <option value="<%= song.id %>" <%= song.submittedBy === userId ? 'disabled' : '' %>>
-                            <%= song.title %> - <%= song.artist %> <%= song.submittedBy === userId ? '(Your song)' : '' %>
-                          </option>
-                        <% }); %>
-                      </select>
-                    </div>
-                    <div class="top3-selection">
-                      <label>3rd place (1 point):</label>
-                      <select name="third" required>
-                        <option value="">-- Select song --</option>
-                        <% songsWithVotes.forEach(song => { %>
-                          <option value="<%= song.id %>" <%= song.submittedBy === userId ? 'disabled' : '' %>>
-                            <%= song.title %> - <%= song.artist %> <%= song.submittedBy === userId ? '(Your song)' : '' %>
-                          </option>
-                        <% }); %>
-                      </select>
-                    </div>
-                  </div>
-                  <button type="submit" class="button">Submit Votes</button>
-                </form>
-                
-                <h4>Current Rankings:</h4>
-                <ul class="songs-list">
-                  <% songsWithVotes.forEach((song, index) => { %>
-                    <li class="song-item">
-                      <div class="song-info">
-                        <span class="rank">#<%= index + 1 %></span>
-                        <strong><%= song.title %></strong> - <%= song.artist %>
-                      </div>
-                      <div class="song-votes">
-                        <span class="vote-count"><%= song.voteCount %> points</span>
-                      </div>
-                    </li>
-                  <% }); %>
-                </ul>
-              <% } else if (group.votingMethod === 'rating' && phase === 'voting' && isMember) { %>
-                <form action="/groups/<%= group.id %>/vote/rating" method="POST" class="rating-form">
-                  <h4>Rate the songs (1-5):</h4>
-                  <ul class="rating-list">
-                    <% songsWithVotes.forEach(song => { %>
-                      <li class="rating-item">
-                        <div class="song-info">
-                          <strong><%= song.title %></strong> - <%= song.artist %>
-                        </div>
-                        <% if (song.submittedBy !== userId) { %>
-                          <div class="rating-controls">
-                            <% for(let i = 1; i <= 5; i++) { %>
-                              <input type="radio" name="rating_<%= song.id %>" id="rating_<%= song.id %>_<%= i %>" value="<%= i %>" 
-                                <%= song.userRating === i ? 'checked' : '' %>>
-                              <label for="rating_<%= song.id %>_<%= i %>"><%= i %></label>
-                            <% } %>
-                          </div>
-                        <% } else { %>
-                          <div class="rating-disabled">Your song (can't rate)</div>
-                        <% } %>
-                      </li>
                     <% }); %>
-                  </ul>
-                  <button type="submit" class="button">Submit Ratings</button>
-                </form>
-                
-                <h4>Current Ratings:</h4>
-                <ul class="songs-list">
-                  <% songsWithVotes.forEach((song, index) => { %>
-                    <li class="song-item">
-                      <div class="song-info">
-                        <span class="rank">#<%= index + 1 %></span>
-                        <strong><%= song.title %></strong> - <%= song.artist %>
+                  <% } else if (group.votingMethod === 'rating') { %>
+                    <!-- Rating display with averages -->
+                    <% songsWithVotes.forEach((song, index) => { %>
+                      <div class="song-result">
+                        <span class="rank"><%= index + 1 %></span>
+                        <span class="song-title"><%= song.title %></span>
+                        <span class="song-artist">by <%= song.artist %></span>
+                        <span class="rating-average"><%= parseFloat(song.averageRating).toFixed(1) %> / 10</span>
+                        <span class="rating-count">(<%= song.voteCount %> ratings)</span>
                       </div>
-                      <div class="song-votes">
-                        <span class="vote-count"><%= (song.ratingAvg || 0).toFixed(1) %>/5 (<%= song.ratingCount %> ratings)</span>
-                      </div>
-                    </li>
-                  <% }); %>
-                </ul>
+                    <% }); %>
+                  <% } %>
+                </div>
+              <% } else { %>
+                <!-- During voting, just show a message -->
+                <p>Voting is in progress. Results will be available once voting has ended.</p>
               <% } %>
             <% } else { %>
               <p>No songs have been submitted yet.</p>
@@ -385,13 +290,13 @@
       let countdownEndMessage;
 
       if ('<%= phase %>' === 'pending') {
-        targetTime = new Date('<%= currentRound.inputOpen %>').getTime();
+        targetTime = new Date('<%= currentRound ? currentRound.inputOpen : "" %>').getTime();
         countdownEndMessage = 'Song submission is now open!';
       } else if ('<%= phase %>' === 'input') {
-        targetTime = new Date('<%= currentRound.inputClose %>').getTime();
+        targetTime = new Date('<%= currentRound ? currentRound.inputClose : "" %>').getTime();
         countdownEndMessage = 'Song submission is now closed!';
       } else if ('<%= phase %>' === 'voting') {
-        targetTime = new Date('<%= currentRound.votingClose %>').getTime();
+        targetTime = new Date('<%= currentRound ? currentRound.votingClose : "" %>').getTime();
         countdownEndMessage = 'Voting is now closed!';
       } else {
         targetTime = Date.now();
@@ -780,6 +685,55 @@
 
   .voting-button:hover {
     background-color: #1565c0;
+  }
+  
+  .results-container {
+    margin-top: 15px;
+  }
+
+  .song-result {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 8px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .rank {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    background-color: #1976d2;
+    color: white;
+    border-radius: 50%;
+    margin-right: 15px;
+    font-weight: bold;
+  }
+
+  .song-title {
+    font-weight: bold;
+    margin-right: 10px;
+  }
+
+  .song-artist {
+    color: #666;
+    margin-right: auto;
+  }
+
+  .vote-count, .rating-average {
+    font-weight: bold;
+    color: #1976d2;
+    margin-left: 10px;
+  }
+
+  .rating-count {
+    color: #666;
+    font-size: 0.9em;
+    margin-left: 5px;
   }
   
   @media (max-width: 768px) {

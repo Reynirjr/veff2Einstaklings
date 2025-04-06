@@ -3,8 +3,8 @@ const app = express();
 const path = require('path');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
-const sequelize = require('./config/database');
-const { User, Group, Song, Vote, Round } = require('./models');
+const db = require('./models');  
+const { User, Group, Song, Vote, Round } = db;  
 const helmet = require('helmet');
 const roundStatusMiddleware = require('./middleware/roundStatusMiddleware');
 const { updateRoundsStatus } = require('./utils/roundStatus');
@@ -14,8 +14,11 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"]
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://www.youtube.com", "https://s.ytimg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com"],
+      childSrc: ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com"],
+      imgSrc: ["'self'", "https://i.ytimg.com", "https://img.youtube.com", "https://www.youtube.com", "data:"]
     }
   }
 }));
@@ -40,18 +43,17 @@ app.use((req, res, next) => {
   next();
 });
 
-sequelize.authenticate()
+db.sequelize.authenticate()
   .then(() => console.log('Database connected successfully.'))
   .catch(err => console.error('Unable to connect to the database:', err));
 
-sequelize.sync({ alter: true })
+  db.sequelize.sync({ alter: true })
   .then(() => {
     console.log('Database synced successfully.');
     updateRoundsStatus();
   })
   .catch(err => console.error('Error syncing database:', err));
 
-// Views and static files
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));

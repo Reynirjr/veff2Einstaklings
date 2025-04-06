@@ -26,41 +26,35 @@
       
       <div class="schedule-container">
         <div class="schedule-row">
-          <div class="schedule-label">Song Submission:</div>
+          <div class="schedule-label">Round Date:</div>
           <div class="schedule-inputs">
             <div class="date-input">
-              <label for="inputStartDate">Start Date:</label>
-              <input type="date" id="inputStartDate" name="inputStartDate" required>
-            </div>
-            <div class="time-inputs">
-              <div>
-                <label for="inputOpenTime">From:</label>
-                <input type="time" id="inputOpenTime" name="inputOpenTime" value="00:00" required min="00:00" max="23:59" pattern="([0-1][0-9]|2[0-3]):[0-5][0-9]">
-              </div>
-              <div>
-                <label for="inputCloseTime">To:</label>
-                <input type="time" id="inputCloseTime" name="inputCloseTime" value="08:00" required min="00:00" max="23:59" pattern="([0-1][0-9]|2[0-3]):[0-5][0-9]">
-              </div>
+              <label for="roundDate">Date:</label>
+              <input type="date" id="roundDate" name="roundDate" required>
             </div>
           </div>
         </div>
         
         <div class="schedule-row">
-          <div class="schedule-label">Voting:</div>
-          <div class="schedule-inputs">
-            <div class="date-input">
-              <label for="votingStartDate">Start Date:</label>
-              <input type="date" id="votingStartDate" name="votingStartDate" required>
+          <div class="schedule-label">Schedule:</div>
+          <div class="schedule-inputs timeline">
+            <div class="time-row">
+              <label for="submissionOpenTime">Song Submission Opens:</label>
+              <input type="time" id="submissionOpenTime" name="inputOpenTime" value="00:00" required>
             </div>
-            <div class="time-inputs">
-              <div>
-                <label for="votingOpenTime">From:</label>
-                <input type="time" id="votingOpenTime" name="votingOpenTime" value="08:00" required min="00:00" max="23:59" pattern="([0-1][0-9]|2[0-3]):[0-5][0-9]">
-              </div>
-              <div>
-                <label for="votingCloseTime">To:</label>
-                <input type="time" id="votingCloseTime" name="votingCloseTime" value="12:00" required min="00:00" max="23:59" pattern="([0-1][0-9]|2[0-3]):[0-5][0-9]">
-              </div>
+            
+            <div class="timeline-arrow">↓</div>
+            
+            <div class="time-row">
+              <label for="votingOpenTime">Voting Opens / Submission Closes:</label>
+              <input type="time" id="votingOpenTime" name="votingOpenTime" value="08:00" required>
+            </div>
+            
+            <div class="timeline-arrow">↓</div>
+            
+            <div class="time-row">
+              <label for="votingCloseTime">Voting Closes:</label>
+              <input type="time" id="votingCloseTime" name="votingCloseTime" value="12:00" required>
             </div>
           </div>
         </div>
@@ -119,7 +113,7 @@
         </div>
         
         <div>
-          <input type="radio" name="themeOption" id="randomTheme" value="custom" checked> 
+          <input type="radio" name="themeOption" id="randomTheme" value="random" checked> 
           <label for="randomTheme">Surprise me!</label>
         </div>
       </div>
@@ -141,11 +135,11 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const today = new Date();
+    
+    document.getElementById('roundDate').valueAsDate = today;
+    
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    document.getElementById('inputStartDate').valueAsDate = today;
-    document.getElementById('votingStartDate').valueAsDate = tomorrow;
     
     document.getElementById('showAdvanced').addEventListener('click', function() {
       const advancedOptions = document.getElementById('advancedOptions');
@@ -221,9 +215,44 @@
     flex: 1;
   }
   
-  .time-inputs {
+  .timeline {
     display: flex;
+    flex-direction: column;
     gap: 10px;
+    border-left: 2px dashed #ccc;
+    padding-left: 20px;
+    margin-left: 10px;
+  }
+  
+  .time-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+    position: relative;
+  }
+  
+  .time-row:before {
+    content: "•";
+    position: absolute;
+    left: -28px;
+    color: #1976d2;
+    font-size: 20px;
+  }
+  
+  .timeline-arrow {
+    text-align: center;
+    font-size: 18px;
+    color: #666;
+    margin-left: 10px;
+    margin-bottom: 15px;
+  }
+  
+  input[type="time"] {
+    width: 120px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
   }
   
   .voting-methods {

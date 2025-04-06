@@ -1,0 +1,43 @@
+<%- include('partials/header') %>
+
+<main>
+  <div class="error-container">
+    <h1>Error</h1>
+    <div class="error-message">
+      <%= message || 'Villa kom upp!' %>
+    </div>
+    <a href="/" class="button">Til baka</a>
+  </div>
+</main>
+
+<style>
+  .error-container {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  
+  .error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 4px;
+    border: 1px solid #f5c6cb;
+  }
+  
+  .button {
+    display: inline-block;
+    background-color: #1976d2;
+    color: white;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 4px;
+    margin-top: 20px;
+  }
+  
+  .button:hover {
+    background-color: #1565c0;
+  }
+</style>
+
+<%- include('partials/footer') %>

@@ -62,10 +62,8 @@ router.post('/groups', authMiddleware, createGroupLimiter, async (req, res) => {
     const {
       name,
       description,
-      inputStartDate,
+      roundDate,
       inputOpenTime,
-      inputCloseTime,
-      votingStartDate,
       votingOpenTime,
       votingCloseTime,
       votingRecurrence,
@@ -104,9 +102,8 @@ router.post('/groups', authMiddleware, createGroupLimiter, async (req, res) => {
       name,
       description,
       created_by: userId,
-      votingDay: new Date(votingStartDate).toLocaleString('en-us', {weekday: 'long'}).toLowerCase(),
+      votingDay: new Date(roundDate).toLocaleString('en-us', {weekday: 'long'}).toLowerCase(),
       inputOpenTime,
-      inputCloseTime,
       votingOpenTime,
       votingCloseTime,
       votingRecurrence,
@@ -121,24 +118,21 @@ router.post('/groups', authMiddleware, createGroupLimiter, async (req, res) => {
       role: 'admin'
     });
 
-    const inputStart = new Date(inputStartDate);
-    const inputEnd = new Date(inputStartDate);
-    const votingStart = new Date(votingStartDate);
-    const votingEnd = new Date(votingStartDate);
+    const inputStart = new Date(roundDate);
+    const votingStart = new Date(roundDate);
+    const votingEnd = new Date(roundDate);
     
     const [inputOpenHour, inputOpenMin] = inputOpenTime.split(':').map(Number);
-    const [inputCloseHour, inputCloseMin] = inputCloseTime.split(':').map(Number);
     const [votingOpenHour, votingOpenMin] = votingOpenTime.split(':').map(Number);
     const [votingCloseHour, votingCloseMin] = votingCloseTime.split(':').map(Number);
     
     inputStart.setHours(inputOpenHour, inputOpenMin, 0, 0);
-    inputEnd.setHours(inputCloseHour, inputCloseMin, 0, 0);
     votingStart.setHours(votingOpenHour, votingOpenMin, 0, 0);
     votingEnd.setHours(votingCloseHour, votingCloseMin, 0, 0);
     
     const now = new Date();
     let initialStatus = 'pending';
-    if (now >= inputStart && now < inputEnd) {
+    if (now >= inputStart && now < votingStart) {
       initialStatus = 'input';
     } else if (now >= votingStart && now < votingEnd) {
       initialStatus = 'voting';
@@ -148,7 +142,7 @@ router.post('/groups', authMiddleware, createGroupLimiter, async (req, res) => {
       groupId: group.id,
       roundNumber: 1,
       inputOpen: inputStart,
-      inputClose: inputEnd,
+      inputClose: votingStart, // Song submission closes when voting opens
       votingOpen: votingStart,
       votingClose: votingEnd,
       theme: finalTheme,
@@ -226,10 +220,20 @@ router.get('/groups/:id', authMiddleware, async (req, res) => {
             attributes: [
               'id', 'title', 'artist', 'submittedBy', 'createdAt',
               [sequelize.fn('COUNT', sequelize.col('votes.id')), 'voteCount'],
+              [
+                group.votingMethod === 'rating' 
+                  ? sequelize.fn('AVG', sequelize.col('votes.value')) 
+                  : sequelize.literal('0'),
+                'averageRating'
+              ],
               [sequelize.literal(`EXISTS(SELECT 1 FROM "Votes" WHERE "Votes"."songId" = "Song"."id" AND "Votes"."userId" = ${userId})`), 'userHasVoted']
             ],
             group: ['Song.id', 'submitter.id', 'votes.id'],
-            order: [[sequelize.fn('COUNT', sequelize.col('votes.id')), 'DESC']]
+            order: [
+              group.votingMethod === 'rating'
+                ? [sequelize.literal('"averageRating"'), 'DESC'] // Add quotes to preserve case
+                : [sequelize.fn('COUNT', sequelize.col('votes.id')), 'DESC']
+            ]
           });
         }
       }

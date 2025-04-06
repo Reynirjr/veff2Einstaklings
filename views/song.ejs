@@ -11,16 +11,20 @@
     <iframe 
       width="560" 
       height="315" 
-      src="https://www.youtube.com/embed/<%= youtubeVideoId %>" 
+      src="https://www.youtube.com/embed/<%= youtubeVideoId %>?si=aI72mvCtodA75s7C" 
+      title="YouTube video player" 
       frameborder="0" 
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+      referrerpolicy="strict-origin-when-cross-origin" 
       allowfullscreen>
     </iframe>
   </div>
   
   <% if (canVote) { %>
     <div class="voting-section">
-      <% if (song.Group.votingMethod === 'single_vote') { %>
+      <% if (!group || !group.votingMethod) { %>
+        <p>Voting information not available</p>
+      <% } else if (group.votingMethod === 'single_vote') { %>
         <form action="/songs/<%= song.id %>/vote" method="POST">
           <input type="hidden" name="voteType" value="single">
           <input type="hidden" name="returnTo" value="/groups/<%= song.groupId %>/voting">
@@ -28,38 +32,23 @@
             <%= userVote ? 'Change Vote to This Song' : 'Vote for This Song' %>
           </button>
         </form>
-      
-      <% } else if (song.Group.votingMethod === 'top_3') { %>
-        <% if (availableRanks.length > 0) { %>
-          <form action="/songs/<%= song.id %>/vote" method="POST" class="rank-form">
-            <h3>Choose a ranking for this song:</h3>
-            <div class="rank-options">
-              <select name="rank" required>
-                <option value="">-- Select rank --</option>
-                <% availableRanks.forEach(rank => { %>
-                  <option value="<%= rank %>">#<%= rank %> (<%= 4-rank %> points)</option>
-                <% }); %>
-              </select>
-            </div>
-            <input type="hidden" name="returnTo" value="/groups/<%= song.groupId %>/voting">
-            <button type="submit">Submit Ranking</button>
-          </form>
-        <% } else { %>
-          <p class="no-ranks">You've already ranked your top 3 songs. To change your rankings, go back to the voting page.</p>
-        <% } %>
-      
-      <% } else if (song.Group.votingMethod === 'rating') { %>
+      <% } else if (group.votingMethod === 'rating') { %>
         <form action="/songs/<%= song.id %>/vote" method="POST" class="rating-form">
           <h3>Rate this song (1-10):</h3>
           <div class="rating-stars">
             <% for (let i = 1; i <= 10; i++) { %>
-              <input type="radio" name="rating" id="rating-<%= i %>" value="<%= i %>" <%= userVote && userVote.value === i ? 'checked' : '' %>>
+              <input type="radio" name="rating" id="rating-<%= i %>" value="<%= i %>" 
+                <%= userVote && userVote.value === i ? 'checked' : '' %>>
               <label for="rating-<%= i %>"><%= i %></label>
             <% } %>
           </div>
+          <input type="hidden" name="voteType" value="rating">
           <input type="hidden" name="returnTo" value="/groups/<%= song.groupId %>/voting">
-          <button type="submit">Submit Rating</button>
+          <button type="submit" class="submit-rating">Submit Rating</button>
         </form>
+      <% } else if (group.votingMethod === 'top_3') { %>
+        <!-- Top 3 voting code would go here -->
+        <p>Top 3 ranking is not implemented yet</p>
       <% } %>
     </div>
   <% } else if (song.submittedBy === userId) { %>

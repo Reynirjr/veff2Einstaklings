@@ -71,6 +71,11 @@ for (const file of modelFiles) {
   }
 }
 
+// Check in your models/index.js that associations are properly defined
+// Example:
+User.belongsToMany(Group, { through: 'GroupUser', foreignKey: 'userId' });
+Group.belongsToMany(User, { through: 'GroupUser', foreignKey: 'groupId' });
+
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
     db[modelName].associate(db);

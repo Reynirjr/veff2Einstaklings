@@ -20,6 +20,13 @@ const csrfProtection = csrf({
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 
+const fs = require('fs');
+const uploadsDir = path.join(__dirname, 'uploads');
+const profilesDir = path.join(uploadsDir, 'profiles');
+
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+if (!fs.existsSync(profilesDir)) fs.mkdirSync(profilesDir);
+
 const isDev = process.env.NODE_ENV !== 'production';
 
 if (isDev) {
@@ -89,12 +96,17 @@ db.sequelize.authenticate()
   .then(() => console.log('Database connected successfully.'))
   .catch(err => console.error('Unable to connect to the database:', err));
 
-db.sequelize.sync({ alter: true })
-  .then(() => {
-    console.log('Database synced successfully.');
-    roundStatus.startRoundStatusChecker();
-  })
-  .catch(err => console.error('Error syncing database:', err));
+if (process.env.NODE_ENV !== 'production') {
+  db.sequelize.sync({ alter: true })
+    .then(() => {
+      console.log('Database synced in development mode');
+      roundStatus.startRoundStatusChecker();
+    })
+    .catch(err => console.error('Error syncing database:', err));
+} else {
+  console.log('Production environment detected - using migrations only');
+  roundStatus.startRoundStatusChecker();
+}
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -141,5 +153,5 @@ router.post('/rounds/:roundId/songs', [
 
 app.use(router);
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

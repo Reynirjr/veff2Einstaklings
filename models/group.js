@@ -35,8 +35,8 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: '12:00:00'
     },
     votingRecurrence: {
-      type: DataTypes.ENUM('none', 'weekly', 'biweekly', 'monthly'), 
-      defaultValue: 'none',
+      type: DataTypes.ENUM('none', 'daily', 'weekly', 'biweekly', 'monthly'), 
+      defaultValue: 'weekly',
     },
     theme: {
       type: DataTypes.STRING,

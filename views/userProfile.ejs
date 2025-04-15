@@ -1,0 +1,159 @@
+<%- include('partials/header') %>
+
+<main class="profile-page">
+  <section class="profile-header">
+    <div class="profile-avatar <%= profileUser.profilePicture ? '' : 'avatar-color' %>" id="profile-avatar-<%= profileUser.id %>">
+      <% if (profileUser.profilePicture) { %>
+        <img src="<%= profileUser.profilePicture %>" 
+             alt="<%= profileUser.username %>'s profile"
+             <% if (profileUser.profilePicturePosition) { %>
+               style="<%= getImagePositionStyle(profileUser.profilePicturePosition) %>"
+             <% } %>>
+      <% } else { %>
+        <div class="avatar-initial"><%= profileUser.username.charAt(0).toUpperCase() %></div>
+      <% } %>
+    </div>
+    
+    <div class="profile-info">
+      <h1><%= profileUser.username %></h1>
+      <p class="member-since">Meðlimur síðan <%= formatDateWithMilitaryTime(profileUser.createdAt) %></p>
+      
+      <% if (profileUser.bio) { %>
+        <div class="user-bio">
+          <p><%= profileUser.bio %></p>
+        </div>
+      <% } %>
+      
+      <% if (isOwnProfile) { %>
+        <div class="profile-actions">
+          <a href="/users/<%= profileUser.id %>/edit" class="button">Breyta upplýsingum</a>
+        </div>
+      <% } %>
+    </div>
+  </section>
+  
+  <section class="profile-content">
+    <div class="stats-section">
+      <h2>Tölfræði</h2>
+      <div class="stat-cards">
+        <div class="stat-card">
+          <div class="stat-value"><%= userSongs.length %></div>
+          <div class="stat-label">Lög lögð fram</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= winningSongs.length %></div>
+          <div class="stat-label">Sigurlag</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= userSongs.length > 0 ? Math.round((winningSongs.length / userSongs.length) * 100) : 0 %>%</div>
+          <div class="stat-label">Sigurhlutfall</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="songs-section">
+      <h2>Sigurlög</h2>
+      <% if (winningSongs.length === 0) { %>
+        <p class="no-content">Engin sigurlög ennþá.</p>
+      <% } else { %>
+        <div class="songs-grid">
+          <% winningSongs.forEach(song => { %>
+            <div class="song-card winner">
+              <div class="winner-badge">Sigur</div>
+              <h3><%= song.title %></h3>
+              <p class="artist"><%= song.artist %></p>
+              <p class="group-info">í <a href="/groups/<%= song.group.id %>"><%= song.group.name %></a></p>
+              <a href="/songs/<%= song.id %>" class="button">Hlusta</a>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+    </div>
+    
+    <div class="songs-section">
+      <h2>Nýjustu lög</h2>
+      <% if (userSongs.length === 0) { %>
+        <p class="no-content">Engin lög lögð fram ennþá.</p>
+      <% } else { %>
+        <div class="songs-grid">
+          <% userSongs.slice(0, 4).forEach(song => { %>
+            <div class="song-card <%= song.Round && song.Round.winningSongId === song.id ? 'winner' : '' %>">
+              <% if (song.Round && song.Round.winningSongId === song.id) { %>
+                <div class="winner-badge">Sigur</div>
+              <% } %>
+              <h3><%= song.title %></h3>
+              <p class="artist"><%= song.artist %></p>
+              <p class="group-info">í <a href="/groups/<%= song.group.id %>"><%= song.group.name %></a></p>
+              <a href="/songs/<%= song.id %>" class="button">Hlusta</a>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+    </div>
+    
+    <div class="groups-section">
+      <h2>Hópar (<%= userGroups.length %>)</h2>
+      <% if (userGroups.length === 0) { %>
+        <p class="no-content">Ekki meðlimur í neinum hópum.</p>
+      <% } else { %>
+        <div class="groups-grid">
+          <% userGroups.forEach(group => { %>
+            <div class="group-card">
+              <h3><a href="/groups/<%= group.id %>"><%= group.name %></a></h3>
+              <span class="badge <%= group.GroupUser.role === 'admin' ? 'admin' : '' %>">
+                <%= group.GroupUser.role === 'admin' ? 'Stjórnandi' : 'Meðlimur' %>
+              </span>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+    </div>
+  </section>
+
+  <div id="profile-data" 
+       data-user-id="<%= profileUser.id %>"
+       data-username="<%= profileUser.username %>"
+       data-has-position="<%= (profileUser.profilePicture && profileUser.profilePicturePosition) ? 'true' : 'false' %>"
+       data-position='<%= (profileUser.profilePicture && profileUser.profilePicturePosition) ? 
+                         profileUser.profilePicturePosition : "{}" %>'
+       style="display: none;">
+  </div>
+</main>
+
+<%- include('partials/footer') %>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const profileData = document.getElementById('profile-data');
+    const profileId = profileData.dataset.userId;
+    const username = profileData.dataset.username;
+    const hasPosition = profileData.dataset.hasPosition === 'true';
+    const profileAvatar = document.getElementById('profile-avatar-' + profileId);
+    
+    if (profileAvatar.classList.contains('avatar-color')) {
+      profileAvatar.style.backgroundColor = getRandomColor(username);
+    }
+    
+    if (hasPosition) {
+      try {
+        const positionData = JSON.parse(profileData.dataset.position);
+        const profileImg = document.querySelector('#profile-avatar-' + profileId + ' img');
+        
+        if (profileImg && positionData) {
+          profileImg.style.width = positionData.zoom + '%';
+          profileImg.style.height = 'auto';
+          profileImg.style.transform = `translate(${positionData.x}px, ${positionData.y}px)`;
+        }
+      } catch (err) {
+        console.error('Error applying image position:', err);
+      }
+    }
+  });
+
+  function getRandomColor(username) {
+    const colors = ['#ff5733', '#33ff57', '#3357ff', '#f3ff33', '#ff33f3', '#33fff3'];
+    const index = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    return colors[index];
+  }
+</script>
+

@@ -4,7 +4,7 @@
     <h1>Innskráning</h1>
 
     <% if (signupSuccess) { %>
-      <p style="color: green;">Sign-up successful! Please log in.</p>
+      <p style="color: green;">Nýskráning tókst! Nú máttu skrá þig inn</p>
     <% } %>
 
     <% if (error) { %>
@@ -12,6 +12,7 @@
     <% } %>
 
     <form action="/login" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <div>
             <label for="email">Netfang:</label>
             <input type="email" id="email" name="email" required>

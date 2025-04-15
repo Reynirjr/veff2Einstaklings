@@ -1,0 +1,374 @@
+form {
+  margin-bottom: 2rem;
+}
+
+.form-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.form-section {
+  background-color: var(--white);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 10px var(--shadow);
+}
+
+.form-section-title {
+  border-bottom: 2px solid var(--primary-light);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="url"],
+textarea,
+select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  color: var(--text);
+  background-color: var(--white);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(120, 192, 224, 0.2);
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.form-hint {
+  font-size: 0.875rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+.form-error {
+  color: var(--error);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.radio-group,
+.checkbox-group {
+  margin-bottom: 1rem;
+}
+
+.radio-option,
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.radio-option label,
+.checkbox-option label {
+  margin-left: 0.5rem;
+  margin-bottom: 0;
+  cursor: pointer;
+}
+
+.submit-button {
+  background-color: var(--primary);
+  color: var(--white);
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: block;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.submit-button:hover {
+  background-color: var(--primary-light);
+  transform: translateY(-2px);
+}
+
+.song-form {
+  background-color: var(--off-white);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.song-form input {
+  margin-bottom: 1rem;
+}
+
+.voting-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.voting-method {
+  position: relative;
+  padding: 20px;
+  border-radius: 10px;
+  background-color: var(--off-white);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.voting-method:hover {
+  background-color: rgba(168, 218, 220, 0.2);
+}
+
+.voting-method input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+}
+
+.voting-method input[type="radio"]:checked + label {
+  color: var(--dark-blue);
+}
+
+.voting-method input[type="radio"]:checked + label::before {
+  content: "✓";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: var(--success-green);
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.voting-method input[type="radio"]:checked ~ .voting-method {
+  border-color: var(--sky-blue);
+  background-color: rgba(168, 218, 220, 0.2);
+}
+
+.voting-method label {
+  display: block;
+  cursor: pointer;
+}
+
+.voting-method label strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--dark-blue);
+}
+
+.voting-method label p {
+  color: var(--text-color);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.theme-options {
+  margin: 1rem 0;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.theme-input {
+  margin-top: 0.5rem;
+  transition: opacity 0.3s ease;
+}
+
+.help-text {
+  color: var(--text-color);
+  opacity: 0.8;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.schedule-container {
+  margin-top: 1rem;
+}
+
+.schedule-row {
+  display: flex;
+  margin-bottom: 1.5rem;
+  align-items: flex-start;
+}
+
+.schedule-label {
+  flex: 0 0 120px;
+  font-weight: 500;
+  color: var(--dark-blue);
+  padding-top: 0.5rem;
+}
+
+.schedule-inputs {
+  flex: 1;
+}
+
+.time-row {
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.timeline-arrow {
+  color: var(--dark-blue);
+  font-size: 1.5rem;
+  margin: 0.5rem 0;
+  text-align: center;
+}
+
+.toggle-section {
+  margin-top: 1.5rem;
+}
+
+.button-link {
+  background: none;
+  border: none;
+  color: var(--sky-blue);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.button-link:hover {
+  color: var(--dark-blue);
+}
+
+.password-requirements {
+  background-color: var(--off-white);
+  padding: 15px;
+  border-radius: 8px;
+  margin: 10px 0;
+  font-size: 0.9rem;
+}
+
+.password-requirements p {
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--dark-blue);
+}
+
+.password-requirements ul {
+  padding-left: 20px;
+}
+
+.password-requirements li {
+  margin-bottom: 5px;
+  color: var(--text-color);
+}
+
+.field-error {
+  color: var(--error-red);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: var(--error-red);
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid var(--error-red);
+  animation: fadeIn 0.3s ease;
+}
+
+.server-error {
+  background-color: #ffebee;
+  border-color: var(--error-red);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.rating-form {
+  margin: 1rem 0;
+}
+
+.rating-stars {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.rating-stars input[type="radio"] {
+  display: none;
+}
+
+.rating-stars label {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  background-color: var(--off-white);
+  border-radius: 50%;
+  color: var(--text-color);
+  text-align: center;
+  line-height: 40px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.rating-stars input[type="radio"]:checked + label {
+  background-color: var(--accent-yellow);
+  color: var(--text-color);
+  transform: scale(1.1);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 768px) {
+  .schedule-row {
+    flex-direction: column;
+  }
+  
+  .schedule-label {
+    margin-bottom: 0.5rem;
+  }
+  
+  .voting-methods {
+    grid-template-columns: 1fr;
+  }
+  
+  .rating-stars label {
+    width: 35px;
+    height: 35px;
+    line-height: 35px;
+  }
+  
+  .form-section {
+    padding: 1rem;
+  }
+  
+  .submit-button {
+    width: 100%;
+  }
+}

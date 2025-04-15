@@ -1,0 +1,412 @@
+.group-page {
+  display: grid;
+  grid-template-areas: 
+    "nav"
+    "info"
+    "leaderboard"
+    "round";
+  gap: 1.5rem;
+  position: relative;
+}
+
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--primary-light);
+}
+
+.group-title {
+  margin: 0;
+  color: var(--primary);
+}
+
+.group-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.group-nav {
+  grid-area: nav;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.group-nav h1 {
+  margin: 0;
+  color: var(--dark-blue);
+  text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.5);
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.group-info-section {
+  grid-area: info;
+  position: relative;
+  overflow: hidden;
+}
+
+.group-info-section::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 150px;
+  height: 150px;
+  background-color: var(--light-blue);
+  opacity: 0.2;
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.group-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-label {
+  font-weight: 500;
+  color: var(--primary);
+  margin-bottom: 0.25rem;
+}
+
+.info-value {
+  color: var(--text);
+}
+
+.members-leaderboard-section {
+  grid-area: leaderboard;
+  position: relative;
+}
+
+.leaderboard-container {
+  padding: 1rem 0;
+}
+
+.top-winners {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.winner-card {
+  background-color: var(--white);
+  border-radius: 15px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 5px 15px var(--cloud-shadow);
+  width: 180px;
+  transition: transform 0.3s ease;
+}
+
+.winner-card:hover {
+  transform: translateY(-5px);
+}
+
+.winner-card.first-place {
+  transform: scale(1.05);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 2px solid var(--accent-yellow);
+}
+
+.winner-card.first-place:hover {
+  transform: scale(1.05) translateY(-5px);
+}
+
+.current-round-section {
+  grid-area: round;
+  position: relative;
+}
+
+.round-status {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: var(--white);
+  margin-bottom: 1.5rem;
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--primary);
+}
+
+.status-indicator.pending { background-color: var(--secondary); }
+.status-indicator.input { background-color: var(--primary-light); }
+.status-indicator.voting { background-color: var(--primary); }
+.status-indicator.finished { background-color: var(--success); }
+
+.status-icon {
+  font-size: 2.5rem;
+  margin-right: 1.5rem;
+}
+
+.status-text {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--dark-blue);
+}
+
+.round-schedule {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background-color: var(--off-white);
+  border-radius: 10px;
+}
+
+.schedule-item {
+  background-color: var(--off-white);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.schedule-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.schedule-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  min-width: 150px;
+  color: var(--dark-blue);
+}
+
+.status-complete {
+  background-color: var(--success-green);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 30px;
+  display: inline-block;
+  font-weight: 500;
+  margin: 1rem 0;
+}
+
+.results-container {
+  margin-top: 2rem;
+}
+
+.song-results {
+  margin: 1.5rem 0;
+}
+
+.song-item {
+  display: flex;
+  align-items: center;
+  background-color: var(--white);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.song-rank {
+  font-weight: bold;
+  font-size: 1.25rem;
+  margin-right: 1rem;
+  min-width: 30px;
+}
+
+.song-info {
+  flex-grow: 1;
+}
+
+.song-title {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.song-artist {
+  color: #666;
+}
+
+.song-votes {
+  font-weight: 500;
+  color: var(--primary);
+}
+
+.winner-indicator {
+  background-color: var(--success);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  margin-left: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.submission-section {
+  margin-top: 2rem;
+}
+
+.no-rounds {
+  text-align: center;
+  padding: 2rem;
+  background-color: var(--off-white);
+  border-radius: 10px;
+  margin: 1.5rem 0;
+}
+
+.refresh-results {
+  text-align: center;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background-color: var(--off-white);
+  border-radius: 10px;
+}
+
+.next-round {
+  background-color: var(--off-white);
+  padding: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.admin-badge {
+  display: inline-block;
+  background-color: #ff9800;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin-left: 8px;
+  text-transform: uppercase;
+  vertical-align: middle;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+@media (max-width: 768px) {
+  .group-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .group-actions {
+    width: 100%;
+  }
+  
+  .group-actions .button {
+    flex: 1;
+    text-align: center;
+  }
+  
+  .group-nav {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .nav-buttons {
+    margin-top: 1rem;
+    justify-content: flex-start;
+  }
+  
+  .top-winners {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .round-status {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .status-icon {
+    margin-right: 0;
+    margin-bottom: 1rem;
+  }
+  
+  .schedule-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .schedule-label {
+    margin-bottom: 0.5rem;
+  }
+  
+  .song-item {
+    flex-wrap: wrap;
+  }
+  
+  .song-votes {
+    width: 100%;
+    margin-top: 0.5rem;
+    text-align: right;
+  }
+}
+
+
+.leaderboard-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 10px;
+  vertical-align: middle;
+  background-color: var(--primary);
+}
+
+.leaderboard-avatar img {
+  position: absolute;
+  min-width: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  transform-origin: center;
+}
+
+.winner-card .leaderboard-avatar {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 15px;
+}
+
+.winner-card .leaderboard-avatar .avatar-initial {
+  font-size: 2rem;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.avatar-color {
+  background-color: var(--primary);
+}
+
+.group-info-section, 
+.members-leaderboard-section, 
+.current-round-section {
+  order: unset;
+}

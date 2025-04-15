@@ -1,0 +1,232 @@
+.voting-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.voting-header {
+  margin-bottom: 1.5rem;
+}
+
+.voting-info {
+  background-color: var(--white);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 10px var(--shadow);
+}
+
+.group-info {
+  background-color: var(--white);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 10px var(--shadow);
+}
+
+.voting-method {
+  display: inline-block;
+  background-color: var(--off-white);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: 500;
+  color: var(--primary);
+  margin-top: 0.5rem;
+}
+
+.voting-status {
+  margin-top: 1rem;
+}
+
+.status {
+  display: inline-block;
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.status.pending {
+  background-color: #fff8e1;
+  color: #f57f17;
+}
+
+.status.input {
+  background-color: #e1f5fe;
+  color: #0288d1;
+}
+
+.status.voting {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status.finished {
+  background-color: #eeeeee;
+  color: #616161;
+}
+
+
+.songs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.song-card {
+  background-color: var(--white);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+  border-top: 5px solid var(--primary);
+}
+
+.song-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.song-card:nth-child(5n+1) {
+  border-top-color: #ff7043; 
+}
+
+.song-card:nth-child(5n+2) {
+  border-top-color: #66bb6a;
+}
+
+.song-card:nth-child(5n+3) {
+  border-top-color: #42a5f5; 
+}
+
+.song-card:nth-child(5n+4) {
+  border-top-color: #ab47bc; 
+}
+
+.song-card:nth-child(5n+5) {
+  border-top-color: #ffa726;
+}
+
+.song-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+  z-index: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 0.5rem;
+}
+
+.song-artist {
+  margin-bottom: 1.5rem;
+  color: #555;
+  font-style: italic;
+  z-index: 1;
+  font-size: 0.95rem;
+}
+
+.song-card.watched {
+  border-left: 5px solid #4CAF50;
+}
+
+.song-status {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.watched-badge {
+  background-color: #4CAF50;
+  color: white;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+}
+
+.unwatched-badge {
+  background-color: #f1f1f1;
+  color: #555;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
+.voted-badge {
+  background-color: #2196F3; 
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.song-actions {
+  margin-top: auto;
+  z-index: 1;
+}
+
+.watch-button {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 0.85rem;
+  background-color: var(--primary);
+  color: var(--white);
+  border-radius: 30px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s;
+  border: none;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+}
+
+.watch-button:hover {
+  background-color: var(--primary-light);
+  color: var(--white);
+}
+
+.song-card.watched .watch-button {
+  background-color: #43a047; 
+}
+
+.song-card.watched .watch-button:hover {
+  background-color: #388e3c;
+}
+
+.no-songs {
+  background-color: var(--off-white);
+  padding: 3rem;
+  text-align: center;
+  border-radius: 8px;
+  margin: 2rem 0;
+}
+
+.navigation {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .songs-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .song-status {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

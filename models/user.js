@@ -9,6 +9,9 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       unique: true,
       allowNull: false,
+      validate: {
+        isEmail: true
+      }
     },
     password_hash: {
       type: DataTypes.STRING,
@@ -17,8 +20,22 @@ module.exports = (sequelize, DataTypes) => {
     username: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true
     },
+    profilePicture: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    bio: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    profilePicturePosition: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    }
   }, {
+    tableName: 'Users',
     timestamps: true, 
   });
 

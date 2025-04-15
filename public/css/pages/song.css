@@ -1,0 +1,194 @@
+.song-detail-page {
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.song-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.song-header h1 {
+  color: var(--dark-blue);
+  margin-bottom: 5px;
+}
+
+.song-header h2 {
+  color: var(--text-color);
+  font-weight: normal;
+  margin-top: 0;
+  opacity: 0.8;
+}
+
+.song-title {
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.song-artist {
+  font-size: 1.25rem;
+  font-weight: normal;
+  color: #666;
+  margin-top: 0;
+}
+
+.submitter {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.video-container {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px var(--shadow);
+  margin-bottom: 2rem;
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.voting-section {
+  background-color: var(--white);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  box-shadow: 0 2px 10px var(--shadow);
+  text-align: center;
+}
+
+.voting-section h3 {
+  margin-top: 0;
+  color: var(--primary);
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.vote-button {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  background-color: var(--primary);
+  color: var(--white);
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.vote-button:hover {
+  background-color: var(--primary-light);
+}
+
+.vote-button.voted {
+  background-color: var(--success);
+}
+
+.rating-stars {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+.rating-stars input[type="radio"] {
+  display: none;
+}
+
+.rating-stars label {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  background-color: var(--off-white);
+  border-radius: 4px;
+  color: var(--text);
+  text-align: center;
+  line-height: 40px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.rating-stars input[type="radio"]:checked + label {
+  background-color: var(--secondary);
+  transform: scale(1.1);
+}
+
+.rank-form {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.rank-selection {
+  margin: 1.5rem 0;
+}
+
+.rank-selection select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.current-rank {
+  margin-top: 0.5rem;
+  font-weight: 500;
+  color: var(--primary);
+}
+
+.rank-info {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.available-ranks {
+  background-color: var(--off-white);
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-top: 1rem;
+}
+
+.navigation {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.nav-button {
+  min-width: 120px;
+  text-align: center;
+}
+
+.prev-button {
+  background-color: var(--secondary);
+}
+
+.next-button {
+  background-color: var(--primary);
+}
+
+@media (max-width: 768px) {
+  .navigation {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .navigation .button {
+    width: 100%;
+    text-align: center;
+  }
+}

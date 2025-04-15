@@ -8,6 +8,7 @@ const sequelize = require('../config/database');
 const authMiddleware = require('../middleware/authmiddleware'); 
 const { Group, User, GroupUser, Song, Vote, Round, UserScore } = require('../models');
 const { getNextVotingDate } = require('../utils/dateUtils');
+const { getImagePositionStyle } = require('../utils/imageHelpers');
 
 const createGroupLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
@@ -39,7 +40,8 @@ router.get('/groups', authMiddleware, async (req, res) => {
     
     res.render('groups', { 
       groups: processedGroups,
-      userId 
+      userId,
+      page: 'groups'
     });
   } catch (err) {
     console.error('Error fetching groups:', err);
@@ -142,7 +144,7 @@ router.post('/groups', authMiddleware, createGroupLimiter, async (req, res) => {
       groupId: group.id,
       roundNumber: 1,
       inputOpen: inputStart,
-      inputClose: votingStart, // Song submission closes when voting opens
+      inputClose: votingStart,
       votingOpen: votingStart,
       votingClose: votingEnd,
       theme: finalTheme,
@@ -157,10 +159,28 @@ router.post('/groups', authMiddleware, createGroupLimiter, async (req, res) => {
   }
 });
 
-router.get('/groups/:id', authMiddleware, async (req, res) => {
+router.get('/groups/:id', async (req, res) => {
   try {
     const groupId = req.params.id;
     const userId = req.user.id;
+
+    const now = new Date();
+    const expiredRound = await Round.findOne({
+      where: {
+        groupId: groupId,
+        status: 'voting',
+        votingClose: {
+          [Op.lt]: now
+        }
+      },
+      include: [{ model: Group, as: 'group' }]
+    });
+    
+    if (expiredRound && !req.query.finalized) {
+      const { finalizeRound } = require('../utils/roundStatus');
+      await finalizeRound(expiredRound);
+      return res.redirect(`/groups/${groupId}?finalized=true`);
+    }
 
     const group = await Group.findByPk(groupId, {
       include: [
@@ -177,6 +197,19 @@ router.get('/groups/:id', authMiddleware, async (req, res) => {
                 { model: User, as: 'submitter', attributes: ['username'] },
                 { model: Vote, as: 'votes' }
               ]
+            },
+            {
+              model: User,
+              as: 'winner',
+              required: false
+            },
+            {
+              model: Song,
+              as: 'winningSong',
+              required: false,
+              include: [
+                { model: User, as: 'submitter', attributes: ['username'] }
+              ]
             }
           ]
         }
@@ -185,6 +218,20 @@ router.get('/groups/:id', authMiddleware, async (req, res) => {
 
     if (!group) {
       return res.status(404).send('Group not found');
+    }
+
+    const isMember = group.members.some(member => member.id === userId);
+    
+    if (group.passwordHash && !isMember) {
+      return res.render('groupJoin', { 
+        group: {
+          id: group.id,
+          name: group.name,
+          creatorName: group.creator ? group.creator.username : 'Unknown'
+        },
+        successMessage: req.flash('success'),
+        errorMessage: req.flash('error')
+      });
     }
 
     let currentRound = null;
@@ -211,34 +258,21 @@ router.get('/groups/:id', authMiddleware, async (req, res) => {
         userSubmittedSong = currentRound.songs.find(song => song.submittedBy === userId);
         
         if (phase === 'voting' || phase === 'finished') {
-          songsWithVotes = await Song.findAll({
+          const songs = await Song.findAll({
             where: { roundId: currentRound.id },
             include: [
               { model: User, as: 'submitter', attributes: ['username'] },
-              { model: Vote, as: 'votes', attributes: [] }
-            ],
-            attributes: [
-              'id', 'title', 'artist', 'submittedBy', 'createdAt',
-              [sequelize.fn('COUNT', sequelize.col('votes.id')), 'voteCount'],
-              [
-                sequelize.fn('COALESCE', 
-                  sequelize.fn('AVG', sequelize.col('votes.value')), 
-                  0
-                ), 
-                'averageRating'
-              ],
-              [sequelize.literal(`EXISTS(SELECT 1 FROM "Votes" WHERE "Votes"."songId" = "Song"."id" AND "Votes"."userId" = ${userId})`), 'userHasVoted']
-            ],
-            group: ['Song.id', 'submitter.id', 'submitter.username'],
-            order: [
-              group.votingMethod === 'rating'
-                ? [sequelize.literal('COALESCE(AVG("votes"."value"), 0) DESC')]
-                : [sequelize.fn('COUNT', sequelize.col('votes.id')), 'DESC']
-            ],
-            subQuery: false,
-            includeIgnoreAttributes: false,
-            joinTableAttributes: [],
+              { model: Vote, as: 'votes' }
+            ]
           });
+          
+          songsWithVotes = songs.map(song => {
+            const plainSong = typeof song.get === 'function' ? song.get({ plain: true }) : song;
+            plainSong.voteCount = plainSong.votes ? plainSong.votes.length : 0;
+            return plainSong;
+          });
+          
+          songsWithVotes.sort((a, b) => b.voteCount - a.voteCount);
         }
       }
     }
@@ -251,8 +285,6 @@ router.get('/groups/:id', authMiddleware, async (req, res) => {
       } 
     });
 
-    const isMember = group.members.some(member => member.id === userId);
-    
     const votingDay = group.votingDay;
     const votingStartDate = getNextVotingDate(votingDay, group.votingOpenTime);
     const votingEndDate = new Date(votingStartDate);
@@ -265,37 +297,43 @@ router.get('/groups/:id', authMiddleware, async (req, res) => {
       votingEndDate.setDate(votingEndDate.getDate() + 1);
     }
 
+    const leaderboard = await sequelize.query(`
+      SELECT u.id as "userId", u.username, u."profilePicture", u."profilePicturePosition", 
+             COALESCE(us."roundsWon", 0) as "roundsWon"
+      FROM "Users" u
+      JOIN "GroupUsers" gu ON u.id = gu."userId"
+      LEFT JOIN "UserScores" us ON u.id = us."userId" AND gu."groupId" = us."groupId"
+      WHERE gu."groupId" = :groupId
+      ORDER BY COALESCE(us."roundsWon", 0) DESC
+    `, {
+      replacements: { groupId },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    let nextRound = null;
+    if (currentRound && currentRound.status === 'finished') {
+      nextRound = await Round.findOne({
+        where: {
+          groupId: groupId,
+          status: 'pending',
+          roundNumber: currentRound.roundNumber + 1
+        },
+        order: [['inputOpen', 'ASC']]
+      });
+    }
+
     let isWinner = false;
     let winningRound = null;
-    let nextThemeSelected = true;
-    
-    if (currentRound && currentRound.status === 'finished' && currentRound.winnerId === userId) {
+    let nextThemeSelected = false;
+
+    if (currentRound && currentRound.winnerId === userId) {
       isWinner = true;
-      winningRound = {
-        ...currentRound.get({ plain: true }),
-        winningSong: await Song.findByPk(currentRound.winningSongId, { 
-          attributes: ['id', 'title', 'artist'] 
-        })
-      };
-      nextThemeSelected = currentRound.nextThemeSelected;
+      winningRound = currentRound;
+      nextThemeSelected = !!currentRound.nextThemeSelected;
     }
     
-    const leaderboard = await UserScore.findAll({
-      where: { groupId },
-      include: [{ model: User, attributes: ['username'] }],
-      order: [
-        ['score', 'DESC'],
-        ['roundsWon', 'DESC']
-      ]
-    });
-    
-    const processedLeaderboard = leaderboard.map(entry => ({
-      userId: entry.userId,
-      username: entry.User.username,
-      score: entry.score,
-      roundsWon: entry.roundsWon
-    }));
-    
+    const { formatDateWithMilitaryTime, formatDateTimeRange } = require('../utils/formatters');
+
     res.render('group', { 
       group, 
       isMember, 
@@ -305,7 +343,7 @@ router.get('/groups/:id', authMiddleware, async (req, res) => {
       phase,
       userSubmittedSong,
       rounds: group.rounds || [],
-      songsWithVotes: songsWithVotes.map(song => song.get({ plain: true })),
+      songsWithVotes,
       successMessage: req.flash('success'),
       errorMessage: req.flash('error'),
       votingStart: votingStartDate.getTime(),
@@ -313,7 +351,12 @@ router.get('/groups/:id', authMiddleware, async (req, res) => {
       isWinner,
       winningRound,
       nextThemeSelected,
-      leaderboard: processedLeaderboard
+      leaderboard,
+      nextRound,
+      formatDateWithMilitaryTime,
+      formatDateTimeRange,
+      page: 'group',
+      getImagePositionStyle
     });
   } catch (err) {
     console.error(err);
@@ -403,14 +446,44 @@ router.post('/groups/:id/delete', authMiddleware, async (req, res) => {
       return res.status(403).send('You do not have permission to delete this group');
     }
     
+    await sequelize.query(`
+      DELETE FROM "WinnerThemeSelections"
+      WHERE "roundId" IN (SELECT id FROM "Rounds" WHERE "groupId" = :groupId)
+    `, {
+      replacements: { groupId }
+    });
+    
+    await sequelize.query(`
+      DELETE FROM "Votes"
+      WHERE "songId" IN (SELECT id FROM "Songs" WHERE "groupId" = :groupId)
+    `, {
+      replacements: { groupId }
+    });
+    
+    await sequelize.query(`
+      UPDATE "Rounds" 
+      SET "winningSongId" = NULL, "winnerId" = NULL
+      WHERE "groupId" = :groupId
+    `, {
+      replacements: { groupId }
+    });
+    
+    await UserScore.destroy({ where: { groupId } });
+    
+    await Song.destroy({ where: { groupId } });
+    
+    await Round.destroy({ where: { groupId } });
+    
     await GroupUser.destroy({ where: { groupId } });
-
+    
     await group.destroy();
     
+    req.flash('success', 'Group deleted successfully');
     res.redirect('/groups');
   } catch (err) {
     console.error('Error deleting group:', err);
-    res.status(500).send('Error deleting group');
+    req.flash('error', 'Error deleting group. Please try again.');
+    res.redirect(`/groups/${req.params.id}`);
   }
 });
 
@@ -435,10 +508,10 @@ const adminMiddleware = async (req, res, next) => {
   }
 };
 
-// Admin panel route
 router.get('/groups/:id/admin', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const groupId = req.params.id;
+    const userId = req.user.id;
     
     const group = await Group.findByPk(groupId, {
       include: [
@@ -447,6 +520,11 @@ router.get('/groups/:id/admin', authMiddleware, adminMiddleware, async (req, res
           model: User, 
           as: 'members',
           through: { attributes: ['role'] }
+        },
+        {
+          model: Round,
+          as: 'rounds',
+          order: [['roundNumber', 'DESC']]
         }
       ]
     });
@@ -457,8 +535,11 @@ router.get('/groups/:id/admin', authMiddleware, adminMiddleware, async (req, res
     
     res.render('groupAdmin', { 
       group,
+      userId,
+      rounds: group.rounds || [],
       successMessage: req.flash('success'),
-      errorMessage: req.flash('error')
+      errorMessage: req.flash('error'),
+      page: 'admin'
     });
   } catch (err) {
     console.error('Error loading admin panel:', err);
@@ -466,79 +547,27 @@ router.get('/groups/:id/admin', authMiddleware, adminMiddleware, async (req, res
   }
 });
 
-// Update group settings
 router.post('/groups/:id/settings', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const groupId = req.params.id;
-    const {
-      name,
-      description,
-      theme,
-      groupPassword,
-      changePassword,
-      votingMethod,
-      votingDay,
-      inputOpenTime,
-      votingOpenTime,
-      votingCloseTime
-    } = req.body;
-    
-    const group = await Group.findByPk(groupId);
-    if (!group) {
-      return res.status(404).render('error', { message: 'Group not found' });
-    }
-    
-    // Update basic info
-    group.name = name || group.name;
-    group.description = description || group.description;
-    group.theme = theme || group.theme;
-    group.votingMethod = votingMethod || group.votingMethod;
-    
-    // Update schedule if provided
-    if (votingDay) group.votingDay = votingDay;
-    if (inputOpenTime) group.inputOpenTime = inputOpenTime;
-    if (votingOpenTime) group.votingOpenTime = votingOpenTime;
-    if (votingCloseTime) group.votingCloseTime = votingCloseTime;
-    
-    // Update password if requested
-    if (changePassword === 'true' && groupPassword) {
-      const salt = await bcrypt.genSalt(10);
-      group.passwordHash = await bcrypt.hash(groupPassword, salt);
-    } else if (changePassword === 'remove') {
-      group.passwordHash = null;
-    }
-    
-    await group.save();
-    
-    req.flash('success', 'Group settings updated successfully');
-    res.redirect(`/groups/${groupId}/admin`);
-  } catch (err) {
-    console.error('Error updating group settings:', err);
-    req.flash('error', 'Error updating group settings');
-    res.redirect(`/groups/${req.params.id}/admin`);
-  }
+  req.flash('info', 'Group settings updates are currently disabled');
+  return res.redirect(`/groups/${req.params.id}/admin`);
 });
 
-// Remove member from group
 router.post('/groups/:id/members/:userId/remove', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { id: groupId, userId: targetUserId } = req.params;
     const adminId = req.user.id;
     
-    // Prevent admins from removing themselves
     if (parseInt(targetUserId) === adminId) {
       req.flash('error', 'You cannot remove yourself from the group');
       return res.redirect(`/groups/${groupId}/admin`);
     }
     
-    // Check if target is group creator
     const group = await Group.findByPk(groupId);
     if (parseInt(targetUserId) === group.created_by) {
       req.flash('error', 'You cannot remove the group creator');
       return res.redirect(`/groups/${groupId}/admin`);
     }
     
-    // Remove the user
     const removed = await GroupUser.destroy({ 
       where: { groupId, userId: targetUserId }
     });
@@ -554,6 +583,327 @@ router.post('/groups/:id/members/:userId/remove', authMiddleware, adminMiddlewar
     console.error('Error removing member:', err);
     req.flash('error', 'Error removing member');
     res.redirect(`/groups/${req.params.id}/admin`);
+  }
+});
+
+router.post('/groups/:id/theme', authMiddleware, async (req, res) => {
+  try {
+    const groupId = req.params.id;
+    const userId = req.user.id;
+    const { roundId, themeOption, theme } = req.body;
+    
+    console.log(`Theme selection for group ${groupId}, round ${roundId}`);
+    console.log(`User ${userId} selected option: ${themeOption}, theme: ${theme}`);
+    
+    const round = await Round.findByPk(roundId);
+    if (!round) {
+      req.flash('error', 'Round not found');
+      return res.redirect(`/groups/${groupId}`);
+    }
+    
+    if (parseInt(round.winnerId) !== parseInt(userId)) {
+      console.log(`User ${userId} attempted to set theme but is not the winner (winner is ${round.winnerId})`);
+      req.flash('error', 'Only the winner can set the theme');
+      return res.redirect(`/groups/${groupId}`);
+    }
+    
+    let newTheme = theme;
+    if (themeOption === 'random') {
+      const themes = [
+        'Pop Classics', '80s Hits', '90s Nostalgia', 'Rock Anthems', 
+        'Hip Hop Classics', 'Electronic Dance', 'Jazz Standards',
+        'Country Classics', 'Indie Gems', 'Movie Soundtracks',
+        'One-Hit Wonders', 'Eurovision', 'Folk Music', 'Blues',
+        'Reggae Vibes', 'Latin Beats', 'K-pop', 'Classical Masterpieces'
+      ];
+      newTheme = themes[Math.floor(Math.random() * themes.length)];
+      console.log(`Random theme selected: ${newTheme}`);
+    }
+    
+    await sequelize.query(`
+      UPDATE "Rounds"
+      SET "nextThemeSelected" = true,
+          "updatedAt" = NOW()
+      WHERE "id" = :roundId
+    `, {
+      replacements: { roundId }
+    });
+    
+    const updatedRound = await Round.findByPk(roundId);
+    console.log(`Round ${roundId} nextThemeSelected updated to: ${updatedRound.nextThemeSelected}`);
+    
+    await Group.update(
+      { theme: newTheme },
+      { where: { id: groupId } }
+    );
+    
+    req.flash('success', `Þema næstu umferðar verður: ${newTheme}`);
+    return res.redirect(`/groups/${groupId}`);
+  } catch (err) {
+    console.error('Error setting theme:', err);
+    req.flash('error', 'Error setting theme');
+    return res.redirect(`/groups/${req.params.id}`);
+  }
+});
+
+router.post('/groups/:id/debug/force-win', authMiddleware, async (req, res) => {
+  try {
+    const groupId = req.params.id;
+    const userId = req.user.id;
+    
+    const isAdmin = await GroupUser.findOne({
+      where: { 
+        groupId,
+        userId, 
+        role: 'admin'
+      }
+    });
+    
+    if (!isAdmin) {
+      req.flash('error', 'Admin access required');
+      return res.redirect(`/groups/${groupId}`);
+    }
+    
+    const round = await Round.findOne({
+      where: { 
+        groupId,
+        status: 'finished'
+      },
+      order: [['createdAt', 'DESC']]
+    });
+    
+    if (!round) {
+      req.flash('error', 'No finished round found to repair');
+      return res.redirect(`/groups/${groupId}`);
+    }
+    
+    console.log(`Manually fixing winner for round ${round.id}`);
+    
+    const songs = await Song.findAll({
+      where: { roundId: round.id },
+      include: [
+        { model: User, as: 'submitter' },
+        { model: Vote, as: 'votes' }
+      ]
+    });
+    
+    let maxVotes = -1;
+    let winningSong = null;
+    
+    songs.forEach(song => {
+      const voteCount = song.votes ? song.votes.length : 0;
+      console.log(`Song ${song.id} "${song.title}" has ${voteCount} votes`);
+      
+      if (voteCount > maxVotes) {
+        maxVotes = voteCount;
+        winningSong = song;
+      }
+    });
+    
+    if (!winningSong) {
+      req.flash('error', 'No songs found for this round');
+      return res.redirect(`/groups/${groupId}`);
+    }
+    
+    console.log(`Winner identified: Song ${winningSong.id} "${winningSong.title}" with ${maxVotes} votes`);
+    
+    await sequelize.query(`
+      UPDATE "Rounds"
+      SET "winnerId" = :winnerId,
+          "winningSongId" = :winningSongId,
+          "nextThemeSelected" = false,
+          "updatedAt" = NOW()
+      WHERE "id" = :roundId
+    `, {
+      replacements: { 
+        roundId: round.id,
+        winnerId: winningSong.submittedBy,
+        winningSongId: winningSong.id
+      }
+    });
+    
+    await sequelize.query(`
+      INSERT INTO "UserScores" ("userId", "groupId", "score", "roundsWon", "createdAt", "updatedAt")
+      VALUES (:userId, :groupId, 1, 1, NOW(), NOW())
+      ON CONFLICT ("userId", "groupId") 
+      DO UPDATE SET 
+        "score" = "UserScores"."score" + 1,
+        "roundsWon" = "UserScores"."roundsWon" + 1,
+        "updatedAt" = NOW()
+    `, {
+      replacements: { 
+        userId: winningSong.submittedBy, 
+        groupId: groupId 
+      }
+    });
+    
+    const [scores] = await sequelize.query(`
+      SELECT * FROM "UserScores" WHERE "userId" = :userId AND "groupId" = :groupId
+    `, {
+      replacements: {
+        userId: winningSong.submittedBy,
+        groupId
+      }
+    });
+    
+    console.log('UserScore after update:', scores);
+    
+    req.flash('success', 'Winner updated successfully!');
+    return res.redirect(`/groups/${groupId}`);
+  } catch (error) {
+    console.error('Error fixing round:', error);
+    req.flash('error', 'Server error while fixing round');
+    return res.redirect(`/groups/${req.params.id}`);
+  }
+});
+
+router.get('/groups/:id/countdown', authMiddleware, async (req, res) => {
+  try {
+    const groupId = req.params.id;
+    const group = await Group.findByPk(groupId);
+    
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+    
+    const currentRound = await Round.findOne({
+      where: { groupId },
+      order: [['roundNumber', 'DESC']]
+    });
+    
+    const votingDay = group.votingDay;
+    const nextVotingDate = getNextVotingDate(votingDay, group.votingOpenTime);
+    
+    const result = {
+      votingDay: group.votingDay,
+      inputOpenTime: group.inputOpenTime,
+      votingOpenTime: group.votingOpenTime,
+      votingCloseTime: group.votingCloseTime,
+      
+      nextVotingDate: nextVotingDate.toISOString(),
+      
+      currentRound: currentRound ? {
+        id: currentRound.id,
+        status: currentRound.status,
+        roundNumber: currentRound.roundNumber,
+        inputOpen: currentRound.inputOpen,
+        inputClose: currentRound.inputClose,
+        votingOpen: currentRound.votingOpen,
+        votingClose: currentRound.votingClose
+      } : null
+    };
+    
+    if (currentRound) {
+      result.nextInputOpen = currentRound.inputOpen;
+      result.nextVotingOpen = currentRound.votingOpen;
+      result.votingEnd = currentRound.votingClose;
+    } else {
+      const nextInputOpen = new Date(nextVotingDate);
+      const nextVotingOpen = new Date(nextVotingDate);
+      const nextVotingClose = new Date(nextVotingDate);
+      
+      const [inputOpenHour, inputOpenMin] = group.inputOpenTime.split(':').map(Number);
+      const [votingOpenHour, votingOpenMin] = group.votingOpenTime.split(':').map(Number);
+      const [votingCloseHour, votingCloseMin] = group.votingCloseTime.split(':').map(Number);
+      
+      nextInputOpen.setHours(inputOpenHour, inputOpenMin, 0, 0);
+      nextVotingOpen.setHours(votingOpenHour, votingOpenMin, 0, 0);
+      nextVotingClose.setHours(votingCloseHour, votingCloseMin, 0, 0);
+      
+      result.nextInputOpen = nextInputOpen.toISOString();
+      result.nextVotingOpen = nextVotingOpen.toISOString();
+      result.votingEnd = nextVotingClose.toISOString();
+    }
+    
+    res.json(result);
+  } catch (err) {
+    console.error('Error getting countdown info:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.post('/groups/:id/finalize-winner', authMiddleware, async (req, res) => {
+  try {
+    const groupId = req.params.id;
+    const { songId, userId, roundId } = req.body;
+    
+    console.log(`Direct winner update requested for group ${groupId}, round ${roundId}`);
+    console.log(`Winner songId: ${songId}, userId: ${userId}`);
+    
+    await sequelize.query(`
+      UPDATE "Rounds"
+      SET "winnerId" = :userId,
+          "winningSongId" = :songId,
+          "nextThemeSelected" = false,
+          "updatedAt" = NOW()
+      WHERE "id" = :roundId
+    `, {
+      replacements: { 
+        roundId,
+        userId,
+        songId
+      }
+    });
+    
+    await sequelize.query(`
+      DELETE FROM "UserScores"
+      WHERE "userId" = :userId AND "groupId" = :groupId
+    `, {
+      replacements: {
+        userId,
+        groupId
+      }
+    });
+    
+    await sequelize.query(`
+      INSERT INTO "UserScores" ("userId", "groupId", "score", "roundsWon", "createdAt", "updatedAt")
+      VALUES (:userId, :groupId, 1, 1, NOW(), NOW())
+    `, {
+      replacements: {
+        userId,
+        groupId
+      }
+    });
+    
+    const [scores] = await sequelize.query(`
+      SELECT * FROM "UserScores" WHERE "userId" = :userId AND "groupId" = :groupId
+    `, {
+      replacements: {
+        userId,
+        groupId
+      }
+    });
+    
+    console.log('UserScore after direct update:', scores);
+    
+    req.flash('success', 'Vinningshafi hefur verið uppfærður!');
+    return res.redirect(`/groups/${groupId}`);
+  } catch (error) {
+    console.error('Error updating winner:', error);
+    req.flash('error', 'Villa kom upp við að uppfæra vinningshafa');
+    return res.redirect(`/groups/${req.params.id}`);
+  }
+});
+
+router.post('/groups/:id/rounds', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const groupId = req.params.id;
+    const { roundStatus } = require('../utils/roundStatus');
+    
+    const group = await Group.findByPk(groupId);
+    if (!group) {
+      req.flash('error', 'Group not found');
+      return res.redirect('/groups');
+    }
+    
+    await roundStatus.createFirstRound(group);
+    
+    req.flash('success', 'New round scheduled successfully');
+    return res.redirect(`/groups/${groupId}`);
+  } catch (err) {
+    console.error('Error creating round:', err);
+    req.flash('error', 'Error creating round');
+    return res.redirect(`/groups/${req.params.id}`);
   }
 });
 

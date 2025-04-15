@@ -133,70 +133,91 @@ router.post('/rounds/:roundId/songs', authMiddleware, async (req, res) => {
     }
 });
 
-router.post('/groups/:groupId/rounds', authMiddleware, async (req, res) => {
+router.post('/groups/:id/rounds', authMiddleware, async (req, res) => {
     try {
-        const { groupId } = req.params;
+        const groupId = req.params.id;
         const userId = req.user.id;
-        const group = await Group.findByPk(groupId);
+        
+        const group = await Group.findByPk(groupId, {
+            include: [{ model: User, as: 'creator' }]
+        });
+        
         if (!group) {
-            return res.status(404).send('Group not found');
+            return res.status(404).render('error', { message: 'Group not found' });
         }
-
+        
         if (group.created_by !== userId) {
-            const isAdmin = await GroupUser.findOne({
-                where: { groupId, userId, role: 'admin' }
+            const isAdmin = await GroupUser.findOne({ 
+                where: { groupId, userId, role: 'admin' } 
             });
+            
             if (!isAdmin) {
-                return res.status(403).send('Only group admins can create new rounds');
+                return res.status(403).render('error', { message: 'You must be an admin to create new rounds' });
             }
         }
-
-        const roundCount = await Round.count({ where: { groupId } });
-
-        const { inputStartDate, theme } = req.body;
-        const inputStart = new Date(inputStartDate);
-        const inputEnd = new Date(inputStartDate);
-        const votingStart = new Date(inputStartDate);
-        const votingEnd = new Date(inputStartDate);
-
-        const [inputOpenHour, inputOpenMin] = group.inputOpenTime
-            .split(':')
-            .map(Number);
-        const [inputCloseHour, inputCloseMin] = group.inputCloseTime
-            .split(':')
-            .map(Number);
-        const [votingOpenHour, votingOpenMin] = group.votingOpenTime
-            .split(':')
-            .map(Number);
-        const [votingCloseHour, votingCloseMin] = group.votingCloseTime
-            .split(':')
-            .map(Number);
-
-        inputStart.setHours(inputOpenHour, inputOpenMin, 0, 0);
-        inputEnd.setHours(inputCloseHour, inputCloseMin, 0, 0);
-        votingStart.setHours(votingOpenHour, votingOpenMin, 0, 0);
-        votingEnd.setHours(votingCloseHour, votingCloseMin, 0, 0);
-
-        if (votingOpenHour < inputCloseHour) {
-            votingStart.setDate(votingStart.getDate() + 1);
-            votingEnd.setDate(votingEnd.getDate() + 1);
-        }
-
-        const round = await Round.create({
-            groupId,
-            roundNumber: roundCount + 1,
-            inputOpen: inputStart,
-            inputClose: inputEnd,
-            votingOpen: votingStart,
-            votingClose: votingEnd,
-            status: 'pending',
-            theme
+        
+        const latestRound = await Round.findOne({
+            where: { groupId },
+            order: [['roundNumber', 'DESC']]
         });
-
-        res.redirect(`/rounds/${round.id}`);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error creating new round');
+        
+        const newRoundNumber = latestRound ? latestRound.roundNumber + 1 : 1;
+        
+        let startDate;
+        if (req.body.startDate) {
+            startDate = new Date(req.body.startDate);
+        } else {
+            startDate = new Date();
+            startDate.setDate(startDate.getDate() + 1);
+        }
+        
+        const inputOpenHour = parseInt(group.inputOpenTime.split(':')[0]);
+        const inputOpenMin = parseInt(group.inputOpenTime.split(':')[1]);
+        
+        const votingOpenHour = parseInt(group.votingOpenTime.split(':')[0]);
+        const votingOpenMin = parseInt(group.votingOpenTime.split(':')[1]);
+        
+        const votingCloseHour = parseInt(group.votingCloseTime.split(':')[0]);
+        const votingCloseMin = parseInt(group.votingCloseTime.split(':')[1]);
+        
+        const inputOpen = new Date(startDate);
+        inputOpen.setHours(inputOpenHour, inputOpenMin, 0, 0);
+        
+        const votingOpen = new Date(startDate);
+        votingOpen.setHours(votingOpenHour, votingOpenMin, 0, 0);
+        
+        const votingClose = new Date(startDate);
+        votingClose.setHours(votingCloseHour, votingCloseMin, 0, 0);
+        
+        if (votingClose < votingOpen) {
+            votingClose.setDate(votingClose.getDate() + 1);
+        }
+        
+        const now = new Date();
+        let initialStatus = 'pending';
+        
+        if (now >= inputOpen && now < votingOpen) {
+            initialStatus = 'input';
+        } else if (now >= votingOpen && now < votingClose) {
+            initialStatus = 'voting';
+        }
+        
+        await Round.create({
+            groupId,
+            roundNumber: newRoundNumber,
+            inputOpen,
+            inputClose: votingOpen,
+            votingOpen,
+            votingClose,
+            theme: group.theme,
+            status: initialStatus
+        });
+        
+        req.flash('success', `Round #${newRoundNumber} created successfully!`);
+        res.redirect(`/groups/${groupId}`);
+    } catch (error) {
+        console.error('Error creating round:', error);
+        res.status(500).render('error', { message: 'Error creating round' });
     }
 });
 
@@ -206,6 +227,8 @@ router.post('/rounds/:id/theme', authMiddleware, async (req, res) => {
         const userId = req.user.id;
         const { theme } = req.body;
         
+        console.log(`Setting theme for round ${roundId}: ${theme} by user ${userId}`);
+        
         const round = await Round.findByPk(roundId, {
             include: [{ model: Group, as: 'group' }]
         });
@@ -214,24 +237,22 @@ router.post('/rounds/:id/theme', authMiddleware, async (req, res) => {
             return res.status(404).render('error', { message: 'Round not found' });
         }
         
-        // Check if this user is the winner
         if (round.winnerId !== userId) {
             return res.status(403).render('error', { message: 'Only the round winner can set the theme' });
         }
         
-        // Check if theme is already set
         if (round.nextThemeSelected) {
             return res.status(400).render('error', { message: 'Theme has already been set' });
         }
         
-        // Update the group theme
         const group = round.group;
         group.theme = theme;
         await group.save();
+        console.log(`Group ${group.id} theme updated to "${theme}"`);
         
-        // Mark theme as selected
         round.nextThemeSelected = true;
         await round.save();
+        console.log(`Round ${round.id} marked as theme selected`);
         
         req.flash('success', 'You have set the theme for the next round!');
         res.redirect(`/groups/${round.groupId}`);
@@ -239,6 +260,216 @@ router.post('/rounds/:id/theme', authMiddleware, async (req, res) => {
         console.error('Error setting round theme:', error);
         res.status(500).render('error', { message: 'Error setting round theme' });
     }
+});
+
+router.post('/rounds/:id/update-times', authMiddleware, async (req, res) => {
+  try {
+    const isJson = req.get('Content-Type') === 'application/json';
+    
+    console.log('Update times route hit with ' + (isJson ? 'JSON' : 'form') + ' data');
+    console.log('Request body:', req.body);
+    
+    const roundId = req.params.id;
+    const { inputOpen, inputClose, votingClose, groupId } = req.body;
+    const userId = req.user.id;
+    
+    const round = await Round.findByPk(roundId, {
+      include: [{ model: Group, as: 'group' }]
+    });
+    
+    if (!round) {
+      console.error('Round not found:', roundId);
+      if (isJson) {
+        return res.status(404).json({ error: 'Round not found' });
+      } else {
+        req.flash('error', 'Round not found');
+        return res.redirect('/groups');
+      }
+    }
+    
+    console.log('Found round:', round.id, 'for group:', round.groupId);
+    
+    const isAdmin = await GroupUser.findOne({
+      where: {
+        groupId: round.groupId,
+        userId,
+        role: 'admin'
+      }
+    });
+    
+    if (!isAdmin && round.group.created_by !== userId) {
+      console.error('User not admin:', userId);
+      if (isJson) {
+        return res.status(403).json({ error: 'You must be an admin to update round times' });
+      } else {
+        req.flash('error', 'You must be an admin to update round times');
+        return res.redirect(`/groups/${round.groupId}`);
+      }
+    }
+    
+    const inputOpenDate = new Date(inputOpen);
+    const inputCloseDate = new Date(inputClose);
+    const votingOpenDate = new Date(inputClose); 
+    const votingCloseDate = new Date(votingClose);
+    
+    console.log('Time values:', {
+      inputOpenDate,
+      inputCloseDate,
+      votingOpenDate,
+      votingCloseDate
+    });
+    
+    if (inputOpenDate >= inputCloseDate) {
+      if (isJson) {
+        return res.status(400).json({ error: 'Song submission open time must be before close time' });
+      } else {
+        req.flash('error', 'Song submission open time must be before close time');
+        return res.redirect(`/groups/${round.groupId}/admin`);
+      }
+    }
+    
+    if (votingOpenDate >= votingCloseDate) {
+      if (isJson) {
+        return res.status(400).json({ error: 'Voting open time must be before close time' });
+      } else {
+        req.flash('error', 'Voting open time must be before close time');
+        return res.redirect(`/groups/${round.groupId}/admin`);
+      }
+    }
+    
+    round.inputOpen = inputOpenDate;
+    round.inputClose = inputCloseDate;
+    round.votingOpen = votingOpenDate; 
+    round.votingClose = votingCloseDate;
+    
+    const now = new Date();
+    
+    if (now < inputOpenDate) {
+      round.status = 'pending';
+    } else if (now >= inputOpenDate && now < votingOpenDate) {
+      round.status = 'input';
+    } else if (now >= votingOpenDate && now < votingCloseDate) {
+      round.status = 'voting';
+    } else if (now >= votingCloseDate && round.status !== 'finished') {
+      round.status = 'finished';
+    }
+    
+    console.log('Updating round with new values:', {
+      inputOpen: round.inputOpen,
+      inputClose: round.inputClose,
+      votingOpen: round.votingOpen,
+      votingClose: round.votingClose,
+      status: round.status
+    });
+    
+    await round.save();
+    console.log('Round updated successfully!');
+    
+    if (isJson) {
+      return res.json({ success: 'Round times updated successfully' });
+    } else {
+      req.flash('success', 'Round times updated successfully');
+      return res.redirect(`/groups/${round.groupId}/admin`);
+    }
+  } catch (error) {
+    console.error('Error updating round times:', error);
+    
+    if (req.get('Content-Type') === 'application/json') {
+      return res.status(500).json({ error: 'Error updating round times: ' + error.message });
+    } else {
+      req.flash('error', 'Error updating round times: ' + error.message);
+      return res.redirect(`/groups/${req.body.groupId || ''}/admin`);
+    }
+  }
+});
+
+
+router.post('/rounds/:id/finalize', authMiddleware, async (req, res) => {
+  try {
+    const roundId = req.params.id;
+    
+    const round = await Round.findByPk(roundId, {
+      include: [{ model: Group, as: 'group' }]
+    });
+    
+    if (!round) {
+      req.flash('error', 'Round not found');
+      return res.redirect('/groups');
+    }
+    
+    console.log(`Showing results for round ${roundId} (group: ${round.groupId})`);
+    
+    if (round.status === 'finished' && round.winnerId && round.winningSongId) {
+      return res.redirect(`/groups/${round.groupId}`);
+    }
+    
+    const songsWithVotes = await Song.findAll({
+      where: { roundId },
+      include: [
+        { model: User, as: 'submitter' },
+        { model: Vote, as: 'votes' }
+      ]
+    });
+    
+    let maxVotes = 0;
+    let winningSong = null;
+    
+    songsWithVotes.forEach(song => {
+      const voteCount = song.votes ? song.votes.length : 0;
+      if (voteCount > maxVotes) {
+        maxVotes = voteCount;
+        winningSong = song;
+      }
+    });
+    
+    if (winningSong && maxVotes > 0) {
+      round.status = 'finished';
+      round.winnerId = winningSong.submittedBy;
+      round.winningSongId = winningSong.id;
+      await round.save();
+      
+      await sequelize.query(`
+        INSERT INTO "UserScores" ("userId", "groupId", "score", "roundsWon", "createdAt", "updatedAt")
+        VALUES (:userId, :groupId, 1, 1, NOW(), NOW())
+        ON CONFLICT ("userId", "groupId") 
+        DO UPDATE SET 
+          "score" = "UserScores"."score" + 1,
+          "roundsWon" = "UserScores"."roundsWon" + 1,
+          "updatedAt" = NOW()
+      `, {
+        replacements: { 
+          userId: winningSong.submittedBy, 
+          groupId: round.groupId 
+        }
+      });
+      
+      req.flash('success', 'Niðurstöður eru tilbúnar! Sigurvegari hefur verið krýndur.');
+    } else {
+      round.status = 'finished';
+      await round.save();
+      req.flash('info', 'Umferð lokið, en engin atkvæði voru greidd.');
+    }
+    
+    return res.redirect(`/groups/${round.groupId}`);
+  } catch (error) {
+    console.error('Error showing results:', error);
+    req.flash('error', 'Villa kom upp við að sýna niðurstöður');
+    return res.redirect('/groups');
+  }
+});
+
+router.get('/rounds/:roundId/finalize-voting', authMiddleware, async (req, res) => {
+  try {
+    const roundId = req.params.roundId;
+    
+    const songController = require('../controllers/songController');
+    
+    req.params.roundId = roundId;
+    await songController.finalizeVoting(req, res);
+  } catch (error) {
+    console.error('Error redirecting to finalize voting:', error);
+    res.status(500).render('error', { message: 'Error finalizing voting' });
+  }
 });
 
 module.exports = router;

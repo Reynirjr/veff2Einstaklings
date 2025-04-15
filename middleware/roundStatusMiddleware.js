@@ -1,10 +1,28 @@
-const { updateRoundsStatus } = require('../utils/roundStatus');
+const { Round, Group } = require('../models');
+const { Op } = require('sequelize');
+const { finalizeRound } = require('../utils/roundStatus');
 
-async function roundStatusMiddleware(req, res, next) {
-  if (req.path.startsWith('/rounds') || req.path.startsWith('/groups')) {
-    await updateRoundsStatus();
+const roundStatusMiddleware = async (req, res, next) => {
+  try {
+    const now = new Date();
+    
+    const expiredRounds = await Round.findAll({
+      where: {
+        status: 'voting',
+        votingClose: { [Op.lt]: now }
+      },
+      include: [{ model: Group, as: 'group' }]
+    });
+    
+    for (const round of expiredRounds) {
+      await finalizeRound(round);
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Error in round status middleware:', error);
+    next();
   }
-  next();
-}
+};
 
 module.exports = roundStatusMiddleware;

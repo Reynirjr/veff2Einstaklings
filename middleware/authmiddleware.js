@@ -2,24 +2,28 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 
 async function authMiddleware(req, res, next) {
-  const token = req.cookies.token;
-  if (!token) {
-    return res.redirect('/login?error=unauthorized');
-  }
-
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const token = req.cookies.token;
     
+    if (!token) {
+      return res.redirect('/login?error=unauthorized');
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findByPk(decoded.id);
+    
     if (!user) {
-      return res.redirect('/login?error=invalid_user');
+      res.clearCookie('token');
+      return res.redirect('/login?error=user_not_found');
     }
     
     req.user = user;
+    res.locals.user = user;
     next();
-  } catch (err) {
-    console.error('JWT verification failed:', err);
-    return res.redirect('/login?error=unauthorized');
+  } catch (error) {
+    console.error('Auth error:', error);
+    res.clearCookie('token');
+    res.redirect('/login?error=invalid_token');
   }
 }
 

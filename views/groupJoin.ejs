@@ -1,0 +1,40 @@
+<%- include('partials/header') %>
+
+<main class="group-join-page">
+  <div class="join-container">
+    <h1>Læstur Hópur: <%= group.name %></h1>
+    <p class="join-description">
+      Þetta er læstur hópur gerður af: <strong><%= group.creatorName %></strong>.<br>
+      Þú þarft lykilorð fyrir aðgang.
+    </p>
+    
+    <% if (errorMessage) { %>
+      <div class="alert error">
+        <%= errorMessage %>
+      </div>
+    <% } %>
+    
+    <% if (successMessage) { %>
+      <div class="alert success">
+        <%= successMessage %>
+      </div>
+    <% } %>
+    
+    <div class="lock-icon">🔒</div>
+    
+    <form action="/groups/<%= group.id %>/join" method="POST" class="join-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="form-group">
+        <label for="enteredPassword">Lykilorð Hóps:</label>
+        <input type="password" name="enteredPassword" id="enteredPassword" required 
+               placeholder="Settu hér lykilorð hópsins" autofocus>
+      </div>
+      <div class="form-actions">
+        <a href="/groups" class="button secondary">Til baka</a>
+        <button type="submit" class="button primary">Gerast Meðlimur</button>
+      </div>
+    </form>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

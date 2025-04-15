@@ -8,123 +8,35 @@
   </div>
   
   <% if (groups && groups.length > 0) { %>
-    <div class="groups-list">
+    <div class="groups-grid">
       <% groups.forEach(group => { %>
-        <div class="group-card">
-          <h2><%= group.name %></h2>
-          <p class="description"><%= group.description %></p>
-          
-          <div class="group-meta">
-            <p><strong>Þema:</strong> <%= group.theme || 'Ekkert þema' %></p>
-            <p><strong>Kosningar:</strong> <%= group.votingDay.charAt(0).toUpperCase() + group.votingDay.slice(1) %>, 
-              <%= group.votingOpenTime.slice(0, 5) %> - <%= group.votingCloseTime.slice(0, 5) %></p>
-            <p><% if (group.passwordHash) { %><span class="badge private">Læstur</span><% } else { %><span class="badge public">Opinn</span><% } %></p>
+        <div class="card group-card <%= group.passwordHash ? 'private' : '' %>">
+          <% if (group.passwordHash) { %>
+            <div class="private-badge">🔒 Læstur hópur</div>
+          <% } %>
+          <h2 class="card-title"><%= group.name %></h2>
+          <div class="card-content">
+            <p class="description"><%= group.description %></p>
+            
+            <div class="group-meta">
+              <p><strong>Þema:</strong> <%= group.theme || 'Ekkert þema' %></p>
+              <p><strong>Kosningar:</strong> <%= group.votingDay.charAt(0).toUpperCase() + group.votingDay.slice(1) %>, 
+                <%= group.votingOpenTime.slice(0, 5) %> - <%= group.votingCloseTime.slice(0, 5) %></p>
+              <p><% if (group.passwordHash) { %><span class="badge private">Læstur</span><% } else { %><span class="badge public">Opinn</span><% } %></p>
+            </div>
           </div>
           
-          <div class="group-actions">
-            <a href="/groups/<%= group.id %>" class="button">Skoða nánar</a>
+          <div class="card-actions">
+            <a href="/groups/<%= group.id %>" class="button full-width">
+              <%= group.passwordHash && !group.isMember ? 'Biðja um aðgang' : 'Skoða nánar' %>
+            </a>
           </div>
         </div>
       <% }); %>
     </div>
   <% } else { %>
-    <p class="no-groups">Engir hópar fundust. <a href="/groups/create">Búa til fyrsta hópinn</a>!</p>
+    <p class="no-groups">Engir hópar fundust. <a href="/groups/create">Búðu til þinn fyrsta hóp!</a>!</p>
   <% } %>
 </main>
-
-<style>
-  .groups-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-    margin-top: 20px;
-  }
-  
-  .group-card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 16px;
-    background: #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: transform 0.2s;
-  }
-  
-  .group-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-  }
-  
-  .group-card h2 {
-    margin-top: 0;
-    color: #333;
-    font-size: 1.5rem;
-  }
-  
-  .description {
-    color: #666;
-    margin-bottom: 15px;
-    height: 60px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-  }
-  
-  .group-meta {
-    font-size: 0.9rem;
-    color: #555;
-  }
-  
-  .group-actions {
-    margin-top: 15px;
-    text-align: right;
-  }
-  
-  .badge {
-    display: inline-block;
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: bold;
-  }
-  
-  .badge.private {
-    background-color: #ffecec;
-    color: #d32f2f;
-  }
-  
-  .badge.public {
-    background-color: #e8f5e9;
-    color: #2e7d32;
-  }
-  
-  .actions {
-    margin-bottom: 20px;
-  }
-  
-  .button {
-    display: inline-block;
-    padding: 8px 16px;
-    background-color: #1976d2;
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-    font-weight: 500;
-  }
-  
-  .button:hover {
-    background-color: #1565c0;
-  }
-  
-  .no-groups {
-    text-align: center;
-    margin: 40px 0;
-    color: #666;
-    font-size: 1.1rem;
-  }
-</style>
 
 <%- include('partials/footer') %>

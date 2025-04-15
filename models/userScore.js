@@ -1,25 +1,14 @@
 module.exports = (sequelize, DataTypes) => {
   const UserScore = sequelize.define('UserScore', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
-    },
     userId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'Users',
-        key: 'id'
-      }
+      primaryKey: true,
+      allowNull: false
     },
     groupId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'Groups',
-        key: 'id'
-      }
+      primaryKey: true,
+      allowNull: false
     },
     score: {
       type: DataTypes.INTEGER,
@@ -33,18 +22,13 @@ module.exports = (sequelize, DataTypes) => {
     }
   }, {
     tableName: 'UserScores',
-    indexes: [
-      {
-        unique: true,
-        fields: ['userId', 'groupId']
-      }
-    ]
+    timestamps: true
   });
-  
+
   UserScore.associate = function(models) {
     UserScore.belongsTo(models.User, { foreignKey: 'userId' });
     UserScore.belongsTo(models.Group, { foreignKey: 'groupId' });
   };
-  
+
   return UserScore;
 };

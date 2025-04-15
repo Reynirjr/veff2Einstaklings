@@ -1,5 +1,5 @@
 const { Song, User, Group, Vote, Round, UserScore, sequelize } = require('../models');
-const { Op } = require('sequelize'); // Add this line
+const { Op } = require('sequelize'); 
 
 exports.list = async (req, res) => {
   try {
@@ -33,12 +33,10 @@ exports.finalizeVoting = async (req, res) => {
       return res.status(400).render('error', { message: 'Voting is not active for this round' });
     }
     
-    // Find winning song based on voting method
     const group = round.group;
     let winningSong;
     
     if (group.votingMethod === 'rating') {
-      // For rating, find song with highest average rating
       winningSong = await Song.findOne({
         where: { roundId },
         include: [
@@ -54,8 +52,61 @@ exports.finalizeVoting = async (req, res) => {
         order: [[sequelize.fn('AVG', sequelize.col('votes.value')), 'DESC']],
         having: sequelize.literal('COUNT("votes"."id") > 0')
       });
+    } else if (group.votingMethod === 'top_3') {
+      const songs = await Song.findAll({
+        where: { roundId },
+        include: [
+          { model: User, as: 'submitter' },
+          { model: Vote, as: 'votes' }
+        ]
+      });
+      
+      let highestPoints = 0;
+      let winningId = null;
+      
+      const songPoints = {};
+      
+      for (const song of songs) {
+        songPoints[song.id] = {
+          id: song.id,
+          title: song.title,
+          artist: song.artist,
+          submittedBy: song.submittedBy,
+          points: 0,
+          votes: []
+        };
+        
+        song.votes.forEach(vote => {
+          const pointValue = 4 - vote.value; 
+          songPoints[song.id].points += pointValue;
+          songPoints[song.id].votes.push({
+            userId: vote.userId,
+            rank: vote.value,
+            points: pointValue
+          });
+        });
+        
+        console.log(`Song: ${song.title} by ${song.artist} - Total points: ${songPoints[song.id].points}`);
+        
+        if (songPoints[song.id].points > highestPoints) {
+          highestPoints = songPoints[song.id].points;
+          winningId = song.id;
+        }
+      }
+      
+      console.log('Points summary:');
+      Object.values(songPoints).forEach(song => {
+        console.log(`${song.title}: ${song.points} points`);
+      });
+      
+      if (winningId) {
+        winningSong = await Song.findByPk(winningId, {
+          include: [{ model: User, as: 'submitter' }]
+        });
+        
+        console.log(`Winning song: ${winningSong.title} with ${highestPoints} points`);
+      }
     } else {
-      // For single vote or top 3, find song with most votes
       winningSong = await Song.findOne({
         where: { roundId },
         include: [
@@ -66,38 +117,61 @@ exports.finalizeVoting = async (req, res) => {
           'id', 'title', 'artist', 'submittedBy',
           [sequelize.fn('COUNT', sequelize.col('votes.id')), 'voteCount']
         ],
-        group: ['Song.id', 'submitter.id'],
+        group: ['Song.id', 'Song.title', 'Song.artist', 'Song.submittedBy', 'submitter.id'],
         order: [[sequelize.fn('COUNT', sequelize.col('votes.id')), 'DESC']]
       });
     }
+    
+    console.log('========== FINALIZING VOTING ==========');
+    console.log('Round ID:', roundId);
+    console.log('Voting method:', group.votingMethod);
+    console.log('Winner song data:', winningSong ? {
+      id: winningSong.id,
+      title: winningSong.title,
+      artist: winningSong.artist,
+      submittedBy: winningSong.submittedBy
+    } : 'No winner found');
     
     if (!winningSong) {
       req.flash('error', 'No votes were cast in this round');
       return res.redirect(`/groups/${round.groupId}`);
     }
     
-    // Update round with winner info
-    round.status = 'finished';
-    round.winnerId = winningSong.submittedBy;
-    round.winningSongId = winningSong.id;
-    await round.save();
+    if (winningSong) {
+   
+      
+      round.status = 'finished';
+      round.winnerId = winningSong.submittedBy;
+      round.winningSongId = winningSong.id;
+      await round.save();
+      
+      const updatedRound = await Round.findByPk(round.id);
     
-    // Update user score
-    const [userScore, created] = await UserScore.findOrCreate({
-      where: {
-        userId: winningSong.submittedBy,
-        groupId: round.groupId
-      },
-      defaults: {
-        score: 1,
-        roundsWon: 1
+      const winnerId = winningSong.submittedBy;
+
+      try {
+        const [userScore, created] = await UserScore.findOrCreate({
+          where: {
+            userId: winnerId,
+            groupId: round.groupId
+          },
+          defaults: {
+            score: 1,
+            roundsWon: 1
+          }
+        });
+        
+        if (!created) {
+          userScore.score += 1;
+          userScore.roundsWon += 1;
+          await userScore.save();
+          console.log(`Updated existing score: userId=${winnerId}, score=${userScore.score}, roundsWon=${userScore.roundsWon}`);
+        } else {
+          console.log(`Created new score: userId=${winnerId}, score=1, roundsWon=1`);
+        }
+      } catch (error) {
+        console.error('Error updating user score:', error);
       }
-    });
-    
-    if (!created) {
-      userScore.score += 1;
-      userScore.roundsWon += 1;
-      await userScore.save();
     }
     
     req.flash('success', 'Voting has been finalized!');
@@ -111,10 +185,7 @@ exports.finalizeVoting = async (req, res) => {
 exports.getSongDetail = async (req, res) => {
   try {
     const songId = req.params.id;
-    
-    if (!songId || isNaN(parseInt(songId))) {
-      return res.status(400).render('error', { message: 'Invalid song ID' });
-    }
+    const userId = req.user ? req.user.id : null;
     
     const song = await Song.findByPk(songId, {
       include: [
@@ -154,10 +225,11 @@ exports.getSongDetail = async (req, res) => {
       }
     }
     
-    const userId = req.user ? req.user.id : null;
     const canVote = userId && (song.submittedBy !== userId);
     
     let userVote = null;
+    let availableRanks = [1, 2, 3];
+    
     if (userId) {
       userVote = await Vote.findOne({
         where: {
@@ -165,7 +237,38 @@ exports.getSongDetail = async (req, res) => {
           userId: userId
         }
       });
-      console.log('User vote found:', userVote ? userVote.get({ plain: true }) : 'No vote');
+      
+      if (userVote) {
+        userVote = userVote.value;
+      }
+      
+      if (song.votingMethod === 'top_3') {
+        const round = await Round.findOne({
+          where: { id: song.roundId }
+        });
+        
+        if (round) {
+          const songsInRound = await Song.findAll({
+            where: { roundId: round.id },
+            attributes: ['id']
+          });
+          
+          const userVotes = await Vote.findAll({
+            where: {
+              userId: userId,
+              songId: {
+                [Op.in]: songsInRound.map(s => s.id)
+              }
+            }
+          });
+          
+          availableRanks = [1, 2, 3].filter(rank => 
+            !userVotes.some(vote => 
+              vote.value === rank && vote.songId !== parseInt(song.id)
+            )
+          );
+        }
+      }
     }
     
     let phase = 'voting';
@@ -193,22 +296,34 @@ exports.getSongDetail = async (req, res) => {
         }
       }
     }
-    
-    const availableRanks = [1, 2, 3];
 
-    // Mark this song as viewed if the user is logged in
     if (req.user) {
-      // Use a cookie to track song views (simpler than creating a new DB table)
       const viewedSongs = req.cookies.viewedSongs ? JSON.parse(req.cookies.viewedSongs) : [];
       
       if (!viewedSongs.includes(songId)) {
         viewedSongs.push(songId);
         res.cookie('viewedSongs', JSON.stringify(viewedSongs), { 
-          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+          maxAge: 30 * 24 * 60 * 60 * 1000, 
           httpOnly: true 
         });
       }
     }
+    
+    const roundSongs = await Song.findAll({
+      where: { 
+        roundId: song.roundId,
+        ...(userId ? { submittedBy: { [Op.ne]: userId } } : {})
+      },
+      order: [['id', 'ASC']],
+      attributes: ['id', 'title']
+    });
+    
+    const currentIndex = roundSongs.findIndex(s => s.id === song.id);
+    const prevSong = currentIndex > 0 ? roundSongs[currentIndex - 1] : null;
+    const nextSong = currentIndex < roundSongs.length - 1 ? roundSongs[currentIndex + 1] : null;
+    
+    const round = await Round.findByPk(song.roundId);
+    const isVotingPhase = round && round.status === 'voting';
     
     res.render('song', { 
       song,
@@ -218,7 +333,10 @@ exports.getSongDetail = async (req, res) => {
       canVote,
       userVote,
       phase,
-      availableRanks
+      availableRanks,
+      prevSong,
+      nextSong,
+      isVotingPhase  
     });
   } catch (error) {
     console.error('Error getting song details:', error);
@@ -257,7 +375,7 @@ exports.submitVote = async (req, res) => {
   try {
     const songId = req.params.id;
     const userId = req.user.id;
-    const { voteType, rating, returnTo } = req.body;
+    const { voteType, rating, rank, returnTo } = req.body;
     
     const song = await Song.findByPk(songId, {
       include: [{ model: Group, as: 'group' }]
@@ -270,63 +388,27 @@ exports.submitVote = async (req, res) => {
     const now = new Date();
     const group = song.group;
     
-    if (!group.votingOpenTime || !group.votingCloseTime || 
-        now < new Date(group.votingOpenTime) || 
-        now > new Date(group.votingCloseTime)) {
-      return res.status(403).render('error', { message: 'Voting is not currently open for this group' });
-    }
-    
-    // Single vote logic
     if (group.votingMethod === 'single_vote') {
-      const existingVote = await Vote.findOne({
-        include: [{
-          model: Song,
-          as: 'song', // Add this alias
-          where: { roundId: song.roundId }
-        }],
-        where: { userId: userId }
+      await sequelize.query(`
+        DELETE FROM "Votes" 
+        WHERE "userId" = :userId AND "songId" IN 
+          (SELECT id FROM "Songs" WHERE "roundId" = :roundId)
+      `, {
+        replacements: { 
+          userId, 
+          roundId: song.roundId 
+        }
       });
-      
-      if (existingVote) {
-        await existingVote.destroy();
-      }
       
       await Vote.create({
         songId,
         userId,
-        value: 1 
-      });
-    }
-    // Rating vote logic
-    else if (group.votingMethod === 'rating' && rating) {
-      // Convert rating to number and validate
-      const ratingValue = parseInt(rating);
-      if (isNaN(ratingValue) || ratingValue < 1 || ratingValue > 10) {
-        return res.status(400).render('error', { message: 'Invalid rating value' });
-      }
-      
-      // Find if user already rated this song
-      const existingVote = await Vote.findOne({
-        where: { 
-          songId: songId,
-          userId: userId 
-        }
+        value: 1
       });
       
-      // Update or create vote
-      if (existingVote) {
-        existingVote.value = ratingValue;
-        await existingVote.save();
-      } else {
-        await Vote.create({
-          songId,
-          userId,
-          value: ratingValue
-        });
-      }
+      console.log(`Vote recorded: User ${userId} voted for song ${songId}`);
     }
     
-    console.log("Return to URL:", returnTo);
     const redirectUrl = returnTo ? 
       (returnTo.startsWith('/') ? returnTo : `/${returnTo}`) : 
       `/groups/${song.groupId}/voting`;
@@ -340,6 +422,7 @@ exports.submitVote = async (req, res) => {
 exports.getGroupVoting = async (req, res) => {
   try {
     const groupId = req.params.groupId;
+    const userId = req.user ? req.user.id : null;
     
     const group = await Group.findByPk(groupId);
     if (!group) {
@@ -347,18 +430,18 @@ exports.getGroupVoting = async (req, res) => {
     }
     
     const currentRound = await Round.findOne({
-      where: { 
-        groupId,
-      },
+      where: { groupId },
       order: [['createdAt', 'DESC']] 
     });
     
     const songs = currentRound ? await Song.findAll({
-      where: { roundId: currentRound.id },
+      where: { 
+        roundId: currentRound.id,
+        ...(userId ? { submittedBy: { [Op.ne]: userId } } : {}) 
+      },
       include: [{ model: User, as: 'submitter' }]
     }) : [];
     
-    // Get user votes for these songs
     const userVotes = {};
     if (req.user) {
       const votes = await Vote.findAll({
@@ -375,10 +458,8 @@ exports.getGroupVoting = async (req, res) => {
       });
     }
     
-    // Get viewed songs from cookie
     const viewedSongs = req.cookies.viewedSongs ? JSON.parse(req.cookies.viewedSongs) : [];
     
-    // Mark songs as watched/voted
     const processedSongs = songs.map(song => {
       const plainSong = song.get({ plain: true });
       plainSong.isWatched = viewedSongs.includes(song.id.toString());

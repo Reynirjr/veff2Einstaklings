@@ -1,297 +1,165 @@
 <%- include('partials/header') %>
 
-<main class="admin-panel">
-  <h1>Admin Panel: <%= group.name %></h1>
+<main class="admin-page">
+  <div class="admin-header">
+    <h1>Admin stjórnborð: <%= group.name %></h1>
+    <a href="/groups/<%= group.id %>" class="button">Aftur í Hóp</a>
+  </div>
   
   <% if (successMessage) { %>
     <div class="alert success">
-      <%= successMessage %>
+      <%= successMessage.replace("Group created successfully! You can now add songs or invite members.", "Hópur stofnaður með góðum árangri! Þú getur nú bætt við lögum eða boðið meðlimum.")
+                        .replace("Group settings updated successfully", "Stillingar hóps uppfærðar með góðum árangri")
+                        .replace("Group settings and future rounds updated successfully", "Stillingar hóps og framtíðarumferðir uppfærðar með góðum árangri")
+                        .replace("Member removed successfully", "Meðlimur fjarlægður með góðum árangri")
+                        .replace("New round created with theme:", "Ný umferð stofnuð með þema:")
+                        .replace("Voting has been finalized!", "Kosningu hefur verið lokið!") %>
     </div>
   <% } %>
-  
-  <% if (errorMessage) { %>
-    <div class="alert error">
-      <%= errorMessage %>
-    </div>
-  <% } %>
-  
-  <div class="admin-sections">
-    <!-- Group Settings Section -->
+
+  <!--
     <section class="admin-section">
-      <h2>Group Settings</h2>
-      <form action="/groups/<%= group.id %>/settings" method="POST">
-        <div class="form-group">
-          <label for="name">Group Name:</label>
-          <input type="text" id="name" name="name" value="<%= group.name %>" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="description">Description:</label>
-          <textarea id="description" name="description" rows="3"><%= group.description %></textarea>
-        </div>
-        
-        <div class="form-group">
-          <label for="theme">Theme:</label>
-          <input type="text" id="theme" name="theme" value="<%= group.theme %>">
-        </div>
-        
-        <div class="form-group">
-          <label>Voting Method:</label>
-          <div class="radio-group">
-            <input type="radio" id="single_vote" name="votingMethod" value="single_vote" <%= group.votingMethod === 'single_vote' ? 'checked' : '' %>>
-            <label for="single_vote">Single Vote</label>
+      <h2>Núverandi leikjar stillingar</h2>
+      <% const currentRound = rounds && rounds.length > 0 ? rounds[0] : null; %>
+      
+      <% if (currentRound) { %>
+        <div class="round-details">
+          <h3>Round #<%= currentRound.roundNumber %></h3>
+          <p><strong>Status:</strong> <%= currentRound.status.toUpperCase() %></p>
+          <p><strong>Theme:</strong> <%= currentRound.theme || 'No theme set' %></p>
+          
+          <div class="round-schedule">
+            <% if (currentRound.inputOpen) { %>
+              <p><strong>Submission opens:</strong> <%= formatDateWithMilitaryTime(currentRound.inputOpen) %></p>
+            <% } %>
             
-            <input type="radio" id="top_3" name="votingMethod" value="top_3" <%= group.votingMethod === 'top_3' ? 'checked' : '' %>>
-            <label for="top_3">Top 3 Ranking</label>
+            <% if (currentRound.votingOpen) { %>
+              <p><strong>Voting opens:</strong> <%= formatDateWithMilitaryTime(currentRound.votingOpen) %></p>
+            <% } %>
             
-            <input type="radio" id="rating" name="votingMethod" value="rating" <%= group.votingMethod === 'rating' ? 'checked' : '' %>>
-            <label for="rating">Rating (1-10)</label>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>Group Password:</label>
-          <div class="radio-group">
-            <input type="radio" id="keep_password" name="changePassword" value="false" checked>
-            <label for="keep_password"><%= group.passwordHash ? 'Keep current password' : 'Keep group open (no password)' %></label>
-            
-            <input type="radio" id="change_password" name="changePassword" value="true">
-            <label for="change_password">Set new password</label>
-            
-            <% if (group.passwordHash) { %>
-              <input type="radio" id="remove_password" name="changePassword" value="remove">
-              <label for="remove_password">Remove password (make group public)</label>
+            <% if (currentRound.votingClose) { %>
+              <p><strong>Voting closes:</strong> <%= formatDateWithMilitaryTime(currentRound.votingClose) %></p>
             <% } %>
           </div>
           
-          <div id="passwordField" style="display: none;">
-            <label for="groupPassword">New Password:</label>
-            <input type="password" id="groupPassword" name="groupPassword">
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>Schedule Settings:</label>
-          
-          <div class="schedule-item">
-            <label for="votingDay">Voting Day:</label>
-            <select id="votingDay" name="votingDay">
-              <option value="monday" <%= group.votingDay === 'monday' ? 'selected' : '' %>>Monday</option>
-              <option value="tuesday" <%= group.votingDay === 'tuesday' ? 'selected' : '' %>>Tuesday</option>
-              <option value="wednesday" <%= group.votingDay === 'wednesday' ? 'selected' : '' %>>Wednesday</option>
-              <option value="thursday" <%= group.votingDay === 'thursday' ? 'selected' : '' %>>Thursday</option>
-              <option value="friday" <%= group.votingDay === 'friday' ? 'selected' : '' %>>Friday</option>
-              <option value="saturday" <%= group.votingDay === 'saturday' ? 'selected' : '' %>>Saturday</option>
-              <option value="sunday" <%= group.votingDay === 'sunday' ? 'selected' : '' %>>Sunday</option>
-            </select>
-          </div>
-          
-          <div class="schedule-item">
-            <label for="inputOpenTime">Song Submission Opens:</label>
-            <input type="time" id="inputOpenTime" name="inputOpenTime" value="<%= group.inputOpenTime.substring(0, 5) %>">
-          </div>
-          
-          <div class="schedule-item">
-            <label for="votingOpenTime">Voting Opens / Submission Closes:</label>
-            <input type="time" id="votingOpenTime" name="votingOpenTime" value="<%= group.votingOpenTime.substring(0, 5) %>">
-          </div>
-          
-          <div class="schedule-item">
-            <label for="votingCloseTime">Voting Closes:</label>
-            <input type="time" id="votingCloseTime" name="votingCloseTime" value="<%= group.votingCloseTime.substring(0, 5) %>">
-          </div>
-        </div>
-        
-        <button type="submit" class="button">Save Changes</button>
-      </form>
-    </section>
-    
-    <!-- Member Management Section -->
-    <section class="admin-section">
-      <h2>Member Management</h2>
-      <div class="members-list admin-members">
-        <% group.members.forEach(member => { %>
-          <div class="member-row">
-            <span class="member-name"><%= member.username %></span>
-            <span class="member-role"><%= member.GroupUser.role %></span>
-            
-            <% if (member.id !== group.created_by) { %>
-              <form action="/groups/<%= group.id %>/members/<%= member.id %>/remove" method="POST" class="member-actions">
-                <button type="submit" class="button danger small" onclick="return confirm('Are you sure you want to remove this member?')">
-                  Remove
-                </button>
+          <% if (currentRound.status !== 'finished') { %>
+            <div class="edit-times">
+              <h4>Update Round Schedule</h4>
+              <form action="/rounds/<%= currentRound.id %>/times" method="POST" class="times-form">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <div class="form-row">
+                  <label for="inputOpen">Submission Opens:</label>
+                  <input type="datetime-local" id="inputOpen" name="inputOpen" 
+                         value="<%= currentRound.inputOpen.toISOString().slice(0, 16) %>">
+                </div>
+                
+                <div class="form-row">
+                  <label for="inputClose">Submission Closes:</label>
+                  <input type="datetime-local" id="inputClose" name="inputClose" 
+                         value="<%= currentRound.inputClose.toISOString().slice(0, 16) %>">
+                </div>
+                
+                <div class="form-row">
+                  <label for="votingOpen">Voting Opens:</label>
+                  <input type="datetime-local" id="votingOpen" name="votingOpen" 
+                         value="<%= currentRound.votingOpen.toISOString().slice(0, 16) %>">
+                </div>
+                
+                <div class="form-row">
+                  <label for="votingClose">Voting Closes:</label>
+                  <input type="datetime-local" id="votingClose" name="votingClose" 
+                         value="<%= currentRound.votingClose.toISOString().slice(0, 16) %>">
+                </div>
+                
+                <button type="submit" class="button">Update Round Times</button>
               </form>
-            <% } else { %>
-              <span class="creator-badge">Creator</span>
-            <% } %>
-          </div>
-        <% }); %>
-      </div>
+            </div>
+          <% } %>
+          
+          <% if (currentRound.status === 'finished') { %>
+            <div class="round-actions">
+              <form action="/groups/<%= group.id %>/rounds" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="button">Create New Round</button>
+              </form>
+            </div>
+          <% } %>
+        </div>
+      <% } else { %>
+        <p>No active rounds found.</p>
+        <div class="round-actions">
+          <form action="/groups/<%= group.id %>/rounds" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="button">Create First Round</button>
+          </form>
+        </div>
+      <% } %>
     </section>
-  </div>
+  -->
+  <section class="admin-section">
+    <h2>Meðlima stýring</h2>
+    <div class="members-list">
+      <table>
+        <thead>
+          <tr>
+            <th>Notendanafn</th>
+            <th>Meðlimir</th>
+            <th>Aðgerðir</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% group.members.forEach(member => { %>
+            <tr>
+              <td><%= member.username %></td>
+              <td>
+                <% const memberRole = member.GroupUser ? member.GroupUser.role : 'member'; %>
+                <%= memberRole %>
+                <% if (member.id === group.created_by) { %>
+                  <span class="creator-badge">Eigandi</span>
+                <% } %>
+              </td>
+              <td>
+                <% if (member.id !== userId && member.id !== group.created_by) { %>
+                  <form action="/groups/<%= group.id %>/members/<%= member.id %>/remove" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="remove-button">Henda úr Hópi</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </section>
   
-  <div class="navigation">
-    <a href="/groups/<%= group.id %>" class="button">Back to Group</a>
-  </div>
+  <section class="admin-section danger-zone">
+    <h2>Danger Zone</h2>
+    <div class="danger-action">
+      <form id="deleteGroupForm" action="/groups/<%= group.id %>/delete" method="POST" onsubmit="return confirmDelete()">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button type="submit" class="delete-button">Eyða Hópi</button>
+      </form>
+    </div>
+  </section>
 </main>
 
 <script>
+  function confirmDelete() {
+    return confirm('Ertu viss um að þú viljir eyða hópnum? Þú munt ekki geta fengið hann aftur.');
+  }
+  
   document.addEventListener('DOMContentLoaded', function() {
-    // Handle password field visibility
-    const keepPassword = document.getElementById('keep_password');
-    const changePassword = document.getElementById('change_password');
-    const removePassword = document.getElementById('remove_password');
-    const passwordField = document.getElementById('passwordField');
-    
-    function updatePasswordFieldVisibility() {
-      passwordField.style.display = changePassword.checked ? 'block' : 'none';
+    const alerts = document.querySelectorAll('.alert');
+    if (alerts.length) {
+      setTimeout(function() {
+        alerts.forEach(alert => {
+          alert.style.opacity = '0';
+          setTimeout(() => alert.style.display = 'none', 500);
+        });
+      }, 5000);
     }
-    
-    keepPassword.addEventListener('change', updatePasswordFieldVisibility);
-    changePassword.addEventListener('change', updatePasswordFieldVisibility);
-    if (removePassword) {
-      removePassword.addEventListener('change', updatePasswordFieldVisibility);
-    }
-    
-    // Initialize visibility
-    updatePasswordFieldVisibility();
-    
-    // Auto-hide alerts after a few seconds
-    setTimeout(function() {
-      const alerts = document.querySelectorAll('.alert');
-      alerts.forEach(alert => {
-        alert.style.opacity = '0';
-        setTimeout(() => alert.style.display = 'none', 500);
-      });
-    }, 5000);
   });
 </script>
-
-<style>
-  .admin-panel {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-  
-  .admin-sections {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 30px;
-    margin-top: 20px;
-  }
-  
-  @media (min-width: 768px) {
-    .admin-sections {
-      grid-template-columns: 3fr 2fr;
-    }
-  }
-  
-  .admin-section {
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-  
-  .form-group {
-    margin-bottom: 20px;
-  }
-  
-  .form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-  }
-  
-  .form-group input[type="text"],
-  .form-group input[type="password"],
-  .form-group textarea,
-  .form-group select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-  }
-  
-  .radio-group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 5px;
-  }
-  
-  .radio-group label {
-    margin-left: 5px;
-    font-weight: normal;
-  }
-  
-  .schedule-item {
-    margin-top: 10px;
-  }
-  
-  .members-list.admin-members {
-    margin-top: 15px;
-  }
-  
-  .member-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-  }
-  
-  .member-role {
-    color: #666;
-    font-size: 0.9em;
-  }
-  
-  .creator-badge {
-    background-color: #e3f2fd;
-    color: #1976d2;
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 0.8em;
-  }
-  
-  .member-actions {
-    display: inline;
-  }
-  
-  .button.danger.small {
-    background-color: #f44336;
-    color: white;
-    padding: 4px 8px;
-    font-size: 0.8em;
-  }
-  
-  .button.danger.small:hover {
-    background-color: #d32f2f;
-  }
-  
-  .navigation {
-    margin-top: 30px;
-  }
-  
-  .alert {
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 4px;
-    transition: opacity 0.5s;
-  }
-  
-  .alert.success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-  }
-  
-  .alert.error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-  }
-</style>
 
 <%- include('partials/footer') %>

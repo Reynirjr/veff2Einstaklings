@@ -1,0 +1,218 @@
+<%- include('partials/header') %>
+
+<main class="profile-edit-page">
+  <h1>Breyta upplýsingum</h1>
+  
+  <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+    <div class="alert error">
+      <%= errorMessage %>
+    </div>
+  <% } %>
+  
+  <% if (typeof successMessage !== 'undefined' && successMessage) { %>
+    <div class="alert success">
+      <%= successMessage %>
+    </div>
+  <% } %>
+  
+  <div class="form-container">
+    <form action="/users/<%= user.id %>/edit" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" id="csrf-token" value="<%= csrfToken %>">
+      
+      <div style="display:none">
+        <p>CSRF Token: <%= csrfToken %></p>
+        <p>Token from locals: <%= locals.csrfToken %></p>
+      </div>
+
+      <div class="form-group">
+        <label for="username">Notandanafn:</label>
+        <input type="text" id="username" value="<%= user.username %>" disabled>
+        <p class="form-hint">Ekki er hægt að breyta notandanafni</p>
+      </div>
+      
+      <div class="form-group avatar-section">
+        <label for="profilePicture">Prófílmynd:</label>
+        
+        <div class="avatar-container">
+          <div class="avatar-preview <%= user.profilePicture ? '' : 'avatar-color' %>" id="avatarPreview">
+            <% if (user.profilePicture) { %>
+              <img src="<%= user.profilePicture %>" id="previewImage" alt="Profile picture">
+            <% } else { %>
+              <div class="avatar-initial"><%= user.username.charAt(0).toUpperCase() %></div>
+            <% } %>
+          </div>
+          
+          <div id="imageControls" class="<%= user.profilePicture ? '' : 'hidden' %>">
+            <div class="slider-container">
+              <label for="zoomSlider">Zoom:</label>
+              <input type="range" id="zoomSlider" min="100" max="200" value="100">
+            </div>
+            <div class="slider-container">
+              <label for="positionXSlider">Position X:</label>
+              <input type="range" id="positionXSlider" min="-100" max="100" value="0">
+            </div>
+            <div class="slider-container">
+              <label for="positionYSlider">Position Y:</label>
+              <input type="range" id="positionYSlider" min="-100" max="100" value="0">
+            </div>
+          </div>
+        </div>
+        
+        <div class="file-upload-wrapper">
+          <input type="file" id="profilePicture" name="profilePicture" accept=".jpg,.jpeg,.png" 
+                 class="file-upload-input">
+          <label for="profilePicture" class="file-upload-button">Velja mynd</label>
+          <p class="file-types">Aðeins JPG eða PNG myndir</p>
+        </div>
+        
+        <input type="hidden" id="imagePosition" name="imagePosition" value="">
+      </div>
+      
+      <div class="form-group">
+        <label for="bio">Um mig:</label>
+        <textarea id="bio" name="bio" rows="4"><%= user.bio || '' %></textarea>
+      </div>
+      
+      <div class="form-actions">
+        <a href="/users/<%= user.id %>" class="button secondary">Hætta við</a>
+        <button type="submit" class="button">Vista breytingar</button>
+      </div>
+    </form>
+  </div>
+</main>
+
+<div id="user-data-container" 
+     data-user-id="<%= user.id %>" 
+     data-username="<%= user.username %>" 
+     data-profile-picture="<%= user.profilePicture || '' %>"
+     style="display: none;"></div>
+
+<script>
+  const userDataElement = document.getElementById('user-data-container');
+  
+  const userData = {
+    id: parseInt(userDataElement.dataset.userId),
+    username: userDataElement.dataset.username,
+    profilePicture: userDataElement.dataset.profilePicture
+  };
+  
+  const csrfToken = document.getElementById('csrf-token').value;
+
+  function getRandomColor(username) {
+    let hash = 0;
+    for (let i = 0; i < username.length; i++) {
+      hash = username.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+      const value = (hash >> (i * 8)) & 0xFF;
+      color += ('00' + value.toString(16)).substr(-2);
+    }
+    return color;
+  }
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('profilePicture');
+    const previewContainer = document.getElementById('avatarPreview');
+    const imageControls = document.getElementById('imageControls');
+    const zoomSlider = document.getElementById('zoomSlider');
+    const positionXSlider = document.getElementById('positionXSlider');
+    const positionYSlider = document.getElementById('positionYSlider');
+    const imagePositionInput = document.getElementById('imagePosition');
+    let previewImage = document.getElementById('previewImage');
+    
+    let imagePosition = {
+      zoom: 100,
+      x: 0,
+      y: 0
+    };
+    
+    function updateImagePosition() {
+      if (!previewImage) return;
+      
+      previewImage.style.width = imagePosition.zoom + '%';
+      previewImage.style.height = 'auto';
+      previewImage.style.transform = `translate(${imagePosition.x}px, ${imagePosition.y}px)`;
+    
+      imagePositionInput.value = JSON.stringify(imagePosition);
+    }
+    
+    fileInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      
+      if (file) {
+        const fileType = file.type;
+        if (fileType !== 'image/jpeg' && fileType !== 'image/png') {
+          alert('Aðeins JPG eða PNG myndir eru leyfðar');
+          fileInput.value = '';
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const initial = previewContainer.querySelector('.avatar-initial');
+          if (initial) initial.remove();
+          
+          if (!previewImage) {
+            previewImage = document.createElement('img');
+            previewImage.id = 'previewImage';
+            previewImage.alt = 'Profile preview';
+            previewContainer.appendChild(previewImage);
+          }
+          
+          previewImage.src = e.target.result;
+          previewContainer.style.backgroundColor = 'transparent';
+          
+          imagePosition = { zoom: 100, x: 0, y: 0 };
+          zoomSlider.value = 100;
+          positionXSlider.value = 0;
+          positionYSlider.value = 0;
+          updateImagePosition();
+          imageControls.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+    
+    zoomSlider.addEventListener('input', function() {
+      imagePosition.zoom = parseInt(this.value);
+      updateImagePosition();
+    });
+    
+    positionXSlider.addEventListener('input', function() {
+      imagePosition.x = parseInt(this.value);
+      updateImagePosition();
+    });
+    
+    positionYSlider.addEventListener('input', function() {
+      imagePosition.y = parseInt(this.value);
+      updateImagePosition();
+    });
+
+    if (!userData.profilePicture) {
+      const avatarPreview = document.getElementById('avatarPreview');
+      avatarPreview.style.backgroundColor = getRandomColor(userData.username);
+    }
+  });
+
+  document.querySelector('form').addEventListener('submit', function(event) {
+    const csrfToken = document.getElementById('csrf-token').value;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', this.action, true);
+    xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+    
+    const formData = new FormData(this);
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        window.location.href = '/users/<%= user.id %>';
+      } else {
+        alert('Error uploading profile: ' + xhr.responseText);
+      }
+    };
+    xhr.send(formData);
+    event.preventDefault();
+  });
+</script>
+
+<%- include('partials/footer') %>

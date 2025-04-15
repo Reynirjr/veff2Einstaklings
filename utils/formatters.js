@@ -1,8 +1,4 @@
-/**
- * Format a date to display in military time format (24-hour)
- * @param {Date} date - Date object to format
- * @returns {String} Formatted date with military time (e.g. "2023-05-15 14:30")
- */
+
 function formatDateWithMilitaryTime(date) {
   if (!date) return '';
   
@@ -16,11 +12,7 @@ function formatDateWithMilitaryTime(date) {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
-/**
- * Format time only in military format
- * @param {Date} date - Date object to extract time from
- * @returns {String} Time string in 24-hour format (e.g. "14:30")
- */
+
 function formatTimeOnly(date) {
   if (!date) return '';
   
@@ -30,7 +22,37 @@ function formatTimeOnly(date) {
   return `${hours}:${minutes}`;
 }
 
+
+function formatDateTimeRange(startDate, endDate) {
+  if (!startDate || !endDate) return '';
+  
+  const sameDay = startDate.getDate() === endDate.getDate() && 
+                 startDate.getMonth() === endDate.getMonth() && 
+                 startDate.getFullYear() === endDate.getFullYear();
+  
+  const day = String(startDate.getDate()).padStart(2, '0');
+  const month = String(startDate.getMonth() + 1).padStart(2, '0');
+  const year = startDate.getFullYear();
+  
+  const startHours = String(startDate.getHours()).padStart(2, '0');
+  const startMinutes = String(startDate.getMinutes()).padStart(2, '0');
+  
+  const endHours = String(endDate.getHours()).padStart(2, '0');
+  const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+  
+  if (sameDay) {
+    return `${day}/${month}/${year} ${startHours}:${startMinutes}-${endHours}:${endMinutes}`;
+  } else {
+    const endDay = String(endDate.getDate()).padStart(2, '0');
+    const endMonth = String(endDate.getMonth() + 1).padStart(2, '0');
+    const endYear = endDate.getFullYear();
+    
+    return `${day}/${month}/${year} ${startHours}:${startMinutes} - ${endDay}/${endMonth}/${endYear} ${endHours}:${endMinutes}`;
+  }
+}
+
 module.exports = {
   formatDateWithMilitaryTime,
-  formatTimeOnly
+  formatTimeOnly,
+  formatDateTimeRange
 };

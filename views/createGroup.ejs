@@ -4,56 +4,57 @@
   <h1>Búa til hóp</h1>
   
   <div class="intro-text">
-    <p>Create your group, set your theme and schedule, and we'll automatically open a round for you to add songs and vote!</p>
+    <p>Búðu til þinn eigin hóp og veldu þema fyrir fyrstu umferðina</p>
   </div>
   
   <form action="/groups" method="POST">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <section class="form-section">
-      <h2>Group Details</h2>
+      <h2>Hópurinn</h2>
       <div>
-        <label for="name">Hóp nafn:</label>
+        <label for="name">Heiti hóps:</label>
         <input type="text" id="name" name="name" required>
       </div>
       
       <div>
-        <label for="description">Description:</label>
+        <label for="description">Um hópinn:</label>
         <textarea id="description" name="description" rows="4"></textarea>
       </div>
     </section>
     
     <section class="form-section">
-      <h2>Schedule</h2>
+      <h2>Tímaáætlun</h2>
       
       <div class="schedule-container">
         <div class="schedule-row">
-          <div class="schedule-label">Round Date:</div>
+          <div class="schedule-label">Dagsetning:</div>
           <div class="schedule-inputs">
             <div class="date-input">
-              <label for="roundDate">Date:</label>
+              <label for="roundDate"></label>
               <input type="date" id="roundDate" name="roundDate" required>
             </div>
           </div>
         </div>
         
         <div class="schedule-row">
-          <div class="schedule-label">Schedule:</div>
+          <div class="schedule-label">Tímaáætlun:</div>
           <div class="schedule-inputs timeline">
             <div class="time-row">
-              <label for="submissionOpenTime">Song Submission Opens:</label>
-              <input type="time" id="submissionOpenTime" name="inputOpenTime" value="00:00" required>
+              <label for="submissionOpenTime">Laga innsendingar opnast:</label>
+              <input type="time" id="submissionOpenTime" name="inputOpenTime" value="12:00" required>
             </div>
             
             <div class="timeline-arrow">↓</div>
             
             <div class="time-row">
-              <label for="votingOpenTime">Voting Opens / Submission Closes:</label>
-              <input type="time" id="votingOpenTime" name="votingOpenTime" value="08:00" required>
+              <label for="votingOpenTime">Kosning opnast / innsendingar lokast:</label>
+              <input type="time" id="votingOpenTime" name="votingOpenTime" value="12:00" required>
             </div>
             
             <div class="timeline-arrow">↓</div>
             
             <div class="time-row">
-              <label for="votingCloseTime">Voting Closes:</label>
+              <label for="votingCloseTime">Kosningu lýkur:</label>
               <input type="time" id="votingCloseTime" name="votingCloseTime" value="12:00" required>
             </div>
           </div>
@@ -61,43 +62,44 @@
       </div>
       
       <div class="toggle-section">
-        <button type="button" id="showAdvanced" class="button-link">Show Advanced Options</button>
+        <button type="button" id="showAdvanced" class="button-link">velja hvenær umferð endurtekur sig</button>
         <div id="advancedOptions" style="display: none;">
-          <label for="votingRecurrence">Recurrence:</label>
+          <label for="votingRecurrence">Endurtekning:</label>
           <select id="votingRecurrence" name="votingRecurrence">
-            <option value="none">One time only</option>
-            <option value="weekly" selected>Weekly</option>
-            <option value="biweekly">Biweekly</option>
-            <option value="monthly">Monthly</option>
+            <option value="none">Aðeins einu sinni</option>
+            <option value="daily">Daglega</option>
+            <option value="weekly" selected>Vikulega</option>
+            <option value="biweekly">Hálfsmánaðarlega</option>
+            <option value="monthly">Mánaðarlega</option>
           </select>
         </div>
       </div>
     </section>
     
     <section class="form-section">
-      <h2>Voting Method</h2>
+      <h2>Kosningaaðferð</h2>
       <div class="voting-methods">
         <div class="voting-method">
           <input type="radio" id="single_vote" name="votingMethod" value="single_vote" checked>
           <label for="single_vote">
-            <strong>Single Vote</strong>
-            <p>Each member picks one favorite song</p>
+            <strong>Einföld kosning</strong>
+            <p>Hver meðlimur velur eitt uppáhalagslag</p>
           </label>
         </div>
         
         <div class="voting-method">
           <input type="radio" id="top_3" name="votingMethod" value="top_3">
           <label for="top_3">
-            <strong>Top 3 Ranking</strong>
-            <p>Members rank their top 3 songs (3, 2, 1 points)</p>
+            <strong>Bestu 3</strong>
+            <p>Meðlimir raða þremur bestu lögunum (fyrsta sæti, annað sæti, þriðja sæti)</p>
           </label>
         </div>
         
         <div class="voting-method">
           <input type="radio" id="rating" name="votingMethod" value="rating">
           <label for="rating">
-            <strong>Rating</strong>
-            <p>Members rate each song from 1-5 stars</p>
+            <strong>Einnkunnargjöf</strong>
+            <p>Meðlimir gefa hverju lagi einkunn og lagið með hæstu einkunnina sigrar</p>
           </label>
         </div>
       </div>
@@ -114,52 +116,47 @@
         
         <div>
           <input type="radio" name="themeOption" id="randomTheme" value="random" checked> 
-          <label for="randomTheme">Surprise me!</label>
+          <label for="randomTheme">Koma mér á óvart!</label>
         </div>
       </div>
     </section>
     
     <section class="form-section">
-      <h2>Security</h2>
+      <h2>Öryggi</h2>
       <div>
-        <label for="groupPassword">Group Password (optional):</label>
+        <label for="groupPassword">Lykilorð fyrir hóp:</label>
         <input type="password" name="groupPassword" id="groupPassword">
-        <p class="help-text">Leave blank to create an open group.</p>
+        <p class="help-text">Skildu eftir autt ef þú vilt að hver sem er geti gerst meðlimur.</p>
       </div>
     </section>
     
-    <button type="submit" class="submit-button">Create Group & Start First Round</button>
+    <button type="submit" class="submit-button">Stofna hóp og hefja fyrstu umferð</button>
   </form>
 </main>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const today = new Date();
-    
     document.getElementById('roundDate').valueAsDate = today;
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
     
     document.getElementById('showAdvanced').addEventListener('click', function() {
       const advancedOptions = document.getElementById('advancedOptions');
       if (advancedOptions.style.display === 'none') {
         advancedOptions.style.display = 'block';
-        this.textContent = 'Hide Advanced Options';
+        this.textContent = 'fela';
       } else {
         advancedOptions.style.display = 'none';
-        this.textContent = 'Show Advanced Options';
+        this.textContent = 'velja hvenær umferð endurtekur sig';
       }
     });
     
     const randomRadio = document.getElementById('randomTheme');
     const customRadio = document.getElementById('customTheme');
     const themeInput = document.getElementById('theme');
-    const randomOptions = document.getElementById('randomThemeOptions');
     
     function updateThemeVisibility() {
       themeInput.disabled = randomRadio.checked;
-      randomOptions.style.display = randomRadio.checked ? 'block' : 'none';
+      themeInput.style.opacity = randomRadio.checked ? '0.5' : '1';
     }
     
     randomRadio.addEventListener('change', updateThemeVisibility);
@@ -168,172 +165,5 @@
     updateThemeVisibility();
   });
 </script>
-
-<style>
-  .intro-text {
-    background-color: #e3f2fd;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-  }
-  
-  .form-section {
-    margin-bottom: 30px;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-    background-color: #f9f9f9;
-  }
-  
-  .form-section h2 {
-    margin-top: 0;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-  }
-  
-  .schedule-container {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-  }
-  
-  .schedule-row {
-    display: flex;
-    align-items: center;
-  }
-  
-  .schedule-label {
-    min-width: 150px;
-    font-weight: bold;
-  }
-  
-  .schedule-inputs {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    flex: 1;
-  }
-  
-  .timeline {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    border-left: 2px dashed #ccc;
-    padding-left: 20px;
-    margin-left: 10px;
-  }
-  
-  .time-row {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 15px;
-    position: relative;
-  }
-  
-  .time-row:before {
-    content: "•";
-    position: absolute;
-    left: -28px;
-    color: #1976d2;
-    font-size: 20px;
-  }
-  
-  .timeline-arrow {
-    text-align: center;
-    font-size: 18px;
-    color: #666;
-    margin-left: 10px;
-    margin-bottom: 15px;
-  }
-  
-  input[type="time"] {
-    width: 120px;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-  
-  .voting-methods {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-  }
-  
-  .voting-method {
-    flex: 1;
-    min-width: 200px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 15px;
-    background-color: white;
-  }
-  
-  .voting-method input[type="radio"] {
-    margin-right: 10px;
-  }
-  
-  .voting-method label {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-  }
-  
-  .voting-method label p {
-    margin-top: 5px;
-    font-size: 0.9em;
-    color: #666;
-  }
-  
-  .theme-options {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-  }
-  
-  .theme-input {
-    display: block;
-    width: 100%;
-    max-width: 400px;
-    margin-top: 5px;
-    margin-left: 25px;
-  }
-  
-  .random-themes {
-    margin-left: 25px;
-    padding: 10px;
-    background-color: #f0f0f0;
-    border-radius: 4px;
-    display: none;
-  }
-  
-  .button-link {
-    background: none;
-    border: none;
-    color: #1976d2;
-    cursor: pointer;
-    text-decoration: underline;
-    padding: 0;
-    margin-bottom: 10px;
-  }
-  
-  .submit-button {
-    display: block;
-    width: 100%;
-    padding: 12px;
-    font-size: 1.1em;
-    background-color: #1976d2;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-  
-  .submit-button:hover {
-    background-color: #1565c0;
-  }
-</style>
 
 <%- include('partials/footer') %>

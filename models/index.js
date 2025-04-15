@@ -40,17 +40,14 @@ const modelFiles = fs.readdirSync(__dirname)
     return (file.indexOf('.') !== 0 && file !== basename && file.slice(-3) === '.js');
   });
 
-// First, import all models without trying to call functions
 for (const file of modelFiles) {
   const modelPath = path.join(__dirname, file);
   const model = require(modelPath);
   
-  // Handle models that are classes (Model.init approach)
   if (model.init) {
     model.init(sequelize, Sequelize.DataTypes);
     db[model.name] = model;
   }
-  // Handle models that are functions (sequelize.define approach)
   else if (typeof model === 'function') {
     try {
       const modelInstance = model(sequelize, Sequelize.DataTypes);
@@ -63,7 +60,6 @@ for (const file of modelFiles) {
   }
 }
 
-// Set up associations after all models are loaded
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
     db[modelName].associate(db);

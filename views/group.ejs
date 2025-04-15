@@ -1,8 +1,19 @@
 <%- include('partials/header') %>
 
-<main>
-  <h1><%= group.name %></h1>
-  
+<main class="group-page">
+  <div class="group-nav">
+    <h1><%= group.name %></h1>
+    <div class="nav-buttons">
+      <a href="/groups" class="button">Aftur að Hópasíðu</a>
+      <% if (group.created_by === userId || isAdmin) { %>
+        <a href="/groups/<%= group.id %>/admin" class="button admin">Stillingar Hóps</a>
+      <% } %>
+      <% if (phase === 'voting' && isMember) { %>
+        <a href="/groups/<%= group.id %>/voting" class="button voting">Kjósa!</a>
+      <% } %>
+    </div>
+  </div>
+
   <% if (successMessage) { %>
     <div class="alert success">
       <%= successMessage %>
@@ -15,942 +26,482 @@
     </div>
   <% } %>
   
-  <div class="group-details">
+  <section class="group-info-section">
     <div class="group-info">
-      <p><strong>Description:</strong> <%= group.description %></p>
-      <p><strong>Created by:</strong> <%= group.creator ? group.creator.username : 'Unknown' %></p>
-      <p><strong>Theme:</strong> <%= group.theme || 'No theme set' %></p>
-      <p><strong>Voting Method:</strong> 
+      <h2>Um Hópinn</h2>
+      <p><strong>Lýsing hóps</strong> <%= group.description %></p>
+      <p><strong>Gerður af:</strong> <%= group.creator ? group.creator.username : 'Unknown' %></p>
+      <p><strong>Þema:</strong> <%= group.theme || 'No theme set' %></p>
+      <p><strong>Tegund kosninga:</strong> 
         <% if (group.votingMethod === 'single_vote') { %>
-          Single Vote
+          Einföld kosnins
         <% } else if (group.votingMethod === 'top_3') { %>
-          Top 3 Weighted
+          Þrjú Bestu
         <% } else if (group.votingMethod === 'rating') { %>
-          Rating (1-10)
+          Einkunnargjöf (1-10)
         <% } %>
       </p>
     </div>
-    
-    <% if (currentRound) { %>
-      <div class="current-round">
-        <h2>Current Round: #<%= currentRound.roundNumber %></h2>
-        
-        <div class="round-status <%= phase %>">
-          <% if (phase === 'pending') { %>
-            <div class="status-icon">⏰</div>
-            <div class="status-text">Song submission starts soon</div>
-          <% } else if (phase === 'input') { %>
-            <div class="status-icon">🎵</div>
-            <div class="status-text">Song submission is open!</div>
-          <% } else if (phase === 'voting') { %>
-            <div class="status-icon">🗳️</div>
-            <div class="status-text">Voting is open!</div>
-          <% } else { %>
-            <div class="status-icon">🏆</div>
-            <div class="status-text">This round has ended</div>
-          <% } %>
-        </div>
-        
-        <div class="round-schedule">
-          <div class="schedule-row">
-            <div class="schedule-label">Song Submission:</div>
-            <div class="schedule-value">
-              <%= formatDateWithMilitaryTime(currentRound.inputOpen) %> - <%= formatDateWithMilitaryTime(currentRound.inputClose) %>
-            </div>
-          </div>
-          <div class="schedule-row">
-            <div class="schedule-label">Voting:</div>
-            <div class="schedule-value">
-              <%= formatDateWithMilitaryTime(currentRound.votingOpen) %> - <%= formatDateWithMilitaryTime(currentRound.votingClose) %>
-            </div>
-          </div>
-        </div>
-        
-        <div id="countdown" class="countdown-container">
-          <% if (phase === 'pending') { %>
-            <h3>Submission starts in:</h3>
-          <% } else if (phase === 'input') { %>
-            <h3>Submission ends in:</h3>
-          <% } else if (phase === 'voting') { %>
-            <h3>Voting ends in:</h3>
-          <% } else { %>
-            <h3>Round completed</h3>
-          <% } %>
-          
-          <% if (phase !== 'finished') { %>
-            <div id="countdown-timer" class="countdown-timer"></div>
-          <% } %>
-        </div>
+  </section>
 
-        <% if (phase === 'voting' && isMember) { %>
-          <div class="voting-button-container">
-            <a href="/groups/<%= group.id %>/voting" class="voting-button">
-              Go to Voting Page
-            </a>
-          </div>
-        <% } %>
-        
-        <% if (phase === 'input' && isMember) { %>
-          <div class="submission-section">
-            <% if (userSubmittedSong) { %>
-              <div class="already-submitted">
-                <h3>Your Submitted Song</h3>
-                <p><strong><%= userSubmittedSong.title %></strong> by <%= userSubmittedSong.artist %></p>
-                <p>YouTube: <a href="<%= userSubmittedSong.youtubeUrl %>" target="_blank">Watch on YouTube</a></p>
-              </div>
-            <% } else { %>
-              <div class="song-form">
-                <h3>Submit Your Song</h3>
-                <form action="/rounds/<%= currentRound.id %>/songs" method="POST">
-                  <div>
-                    <label for="title">Song Title:</label>
-                    <input type="text" name="title" id="title" required>
-                  </div>
-                  
-                  <div>
-                    <label for="artist">Artist:</label>
-                    <input type="text" name="artist" id="artist" required>
-                  </div>
-                  
-                  <div>
-                    <label for="youtubeUrl">YouTube URL:</label>
-                    <input type="text" name="youtubeUrl" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." required>
-                    <p class="help-text">Please enter the full URL to the YouTube video</p>
-                  </div>
-                  
-                  <button type="submit" class="button">Submit Song</button>
-                </form>
-              </div>
-            <% } %>
-          </div>
-        <% } %>
-        
-        <% if (phase === 'voting' || phase === 'finished') { %>
-          <div class="songs-section">
-            <h3><%= phase === 'voting' ? 'Voting in Progress' : 'Final Results' %></h3>
-            
-            <% if (songsWithVotes && songsWithVotes.length > 0) { %>
-              <% if (phase === 'finished') { %>
-                <!-- Only show results after voting is finished -->
-                <div class="results-container">
-                  <% if (group.votingMethod === 'single_vote') { %>
-                    <!-- Single vote display -->
-                    <% songsWithVotes.forEach((song, index) => { %>
-                      <div class="song-result">
-                        <span class="rank"><%= index + 1 %></span>
-                        <span class="song-title"><%= song.title %></span>
-                        <span class="song-artist">by <%= song.artist %></span>
-                        <span class="vote-count"><%= song.voteCount %> votes</span>
-                      </div>
-                    <% }); %>
-                  <% } else if (group.votingMethod === 'rating') { %>
-                    <!-- Rating display with averages -->
-                    <% songsWithVotes.forEach((song, index) => { %>
-                      <div class="song-result">
-                        <span class="rank"><%= index + 1 %></span>
-                        <span class="song-title"><%= song.title %></span>
-                        <span class="song-artist">by <%= song.artist %></span>
-                        <span class="rating-average">
-                          <%= song.averageRating ? parseFloat(song.averageRating).toFixed(1) : 'No' %>/10
-                        </span>
-                        <span class="rating-count">(<%= song.voteCount %> <%= song.voteCount === 1 ? 'rating' : 'ratings' %>)</span>
-                      </div>
-                    <% }); %>
-                  <% } %>
-                </div>
-              <% } else { %>
-                <!-- During voting, just show a message -->
-                <p>Voting is in progress. Results will be available once voting has ended.</p>
-              <% } %>
-            <% } else { %>
-              <p>No songs have been submitted yet.</p>
-            <% } %>
-          </div>
-        <% } %>
-      </div>
-    <% } else { %>
-      <div class="no-rounds">
-        <p>No active rounds at the moment.</p>
-        
-        <% if (group.created_by === userId || isAdmin) { %>
-          <form action="/groups/<%= group.id %>/rounds" method="POST" class="start-round-form">
-            <h3>Start First Round</h3>
-            <div>
-              <label for="inputStartDate">Input Start Date:</label>
-              <input type="date" id="inputStartDate" name="inputStartDate" required>
-            </div>
-            <button type="submit" class="button">Start Round</button>
-          </form>
-        <% } %>
-      </div>
-    <% } %>
-    
-    <% if ((group.created_by === userId || isAdmin) && currentRound && currentRound.status === 'finished') { %>
-      <div class="create-round">
-        <h3>Start New Round</h3>
-        <form action="/groups/<%= group.id %>/rounds" method="POST">
-          <div>
-            <label for="inputStartDate">Start Date:</label>
-            <input type="date" id="inputStartDate" name="inputStartDate" required>
-          </div>
+  <section class="members-leaderboard-section">
+    <h2>Stigatafla</h2>
+    <div class="leaderboard-container">
+      <% if (leaderboard && leaderboard.some(entry => entry.roundsWon > 0)) { %>
+        <div class="top-winners">
+          <% 
+            const winners = leaderboard.filter(entry => entry.roundsWon > 0).slice(0, 3);
+            const trophies = ['🏆', '🥈', '🥉'];
+          %>
           
-          <div>
-            <label for="roundTheme">Theme (optional):</label>
-            <input type="text" id="roundTheme" name="theme">
-          </div>
-          
-          <button type="submit" class="button">Create New Round</button>
-        </form>
-      </div>
-    <% } %>
-    
-    <% if (rounds.length > 1) { %>
-      <div class="past-rounds">
-        <h2>Past Rounds</h2>
-        <div class="rounds-list">
-          <% rounds.slice(1).forEach(round => { %>
-            <div class="round-card">
-              <h3>Round #<%= round.roundNumber %></h3>
-              <p><strong>Theme:</strong> <%= round.theme || 'No specific theme' %></p>
-              <p><strong>Status:</strong> <%= round.status %></p>
-              <a href="/rounds/<%= round.id %>" class="button small">View Details</a>
+          <% winners.forEach((winner, index) => { %>
+            <div class="winner-card <%= index === 0 ? 'first-place' : '' %>">
+              <div class="trophy"><%= trophies[index] %></div>
+              
+              <div class="leaderboard-avatar <%= (!winner.profilePicture || winner.profilePicture === '/images/default-profile.png') ? 'avatar-color' : '' %>" 
+                   id="top-avatar-<%= winner.userId %>">
+                <% if (winner.profilePicture && winner.profilePicture !== '/images/default-profile.png') { %>
+                  <img src="<%= winner.profilePicture %>" 
+                       alt="<%= winner.username %>'s profile"
+                       <% if (winner.profilePicturePosition) { %>
+                         style="<%= getImagePositionStyle(winner.profilePicturePosition, 'winner') %>"
+                       <% } %>>
+                <% } else { %>
+                  <div class="avatar-initial"><%= winner.username.charAt(0).toUpperCase() %></div>
+                <% } %>
+              </div>
+              
+              <div class="winner-name"><%= winner.username %></div>
+              <div class="win-count"><%= winner.roundsWon %> <%= winner.roundsWon === 1 ? 'Sigur' : 'Sigrar' %></div>
             </div>
           <% }); %>
         </div>
-      </div>
-    <% } %>
-    
-    <h2>Members (<%= group.members.length %>)</h2>
-    <ul class="members-list">
-      <% group.members.forEach(member => { %>
-        <li><%= member.username %> <%= member.GroupUser.role === 'admin' ? '(Admin)' : '' %></li>
-      <% }); %>
-    </ul>
+      <% } %>
 
-    <section class="leaderboard-section">
-      <h2>Leaderboard</h2>
       <% if (leaderboard && leaderboard.length > 0) { %>
         <div class="leaderboard">
           <table>
             <thead>
               <tr>
-                <th>Rank</th>
-                <th>Member</th>
-                <th>Rounds Won</th>
-                <th>Score</th>
+                <th>Sæti</th>
+                <th>Meðlimur</th>
+                <th>Leikir Sigraðir</th>
               </tr>
             </thead>
             <tbody>
-              <% leaderboard.forEach((entry, index) => { %>
-                <tr class="<%= entry.userId === userId ? 'current-user' : '' %>">
-                  <td><%= index + 1 %></td>
-                  <td><%= entry.username %></td>
-                  <td><%= entry.roundsWon %></td>
-                  <td><%= entry.score %></td>
-                </tr>
-              <% }); %>
-            </tbody>
-          </table>
+  <% leaderboard.forEach((entry, index) => { %>
+    <tr class="<%= entry.userId === userId ? 'current-user' : entry.roundsWon === 0 ? 'zero-wins' : '' %>">
+      <td><%= index + 1 %></td>
+      <td class="user-info">
+        <div class="leaderboard-avatar <%= (!entry.profilePicture || entry.profilePicture === '/images/default-profile.png') ? 'avatar-color' : '' %>" 
+             id="avatar-<%= entry.userId %>">
+          <% if (entry.profilePicture && entry.profilePicture !== '/images/default-profile.png') { %>
+            <img src="<%= entry.profilePicture %>" 
+                 alt="<%= entry.username %>'s profile"
+                 <% if (entry.profilePicturePosition) { %>
+                   style="<%= getImagePositionStyle(entry.profilePicturePosition, 'avatar') %>"
+                 <% } %>>
+          <% } else { %>
+            <div class="avatar-initial"><%= entry.username.charAt(0).toUpperCase() %></div>
+          <% } %>
+        </div>
+        <%= entry.username %>
+        <% if (group.created_by === entry.userId) { %>
+          <span class="admin-badge">Eigandi</span>
+        <% } %>
+      </td>
+      <td><%= entry.roundsWon %></td>
+    </tr>
+  <% }); %>
+</tbody>
         </div>
       <% } else { %>
-        <p>No rounds have been won yet. Win a round to get on the leaderboard!</p>
+        <p>Enginn meðlimur</p>
       <% } %>
-    </section>
-  </div>
-  
-  <div class="actions">
-    <% if (!isMember) { %>
-      <% if (group.passwordHash) { %>
-        <form action="/groups/<%= group.id %>/join" method="POST">
-          <div>
-            <label for="enteredPassword">Lykilorð hóps:</label>
-            <input type="password" name="enteredPassword" required>
-          </div>
-          <button type="submit" class="button">Gerast meðlimur hóps</button>
-        </form>
-      <% } else { %>
-        <form action="/groups/<%= group.id %>/join" method="POST">
-          <button type="submit" class="button">Gerast meðlimur hóps</button>
-        </form>
-      <% } %>
-    <% } else { %>
-      <p>Þu ert Meðlimur.</p>
       
-      <% if (group.created_by === userId || isAdmin) { %>
-        <a href="/groups/<%= group.id %>/admin" class="button admin">Group Admin Panel</a>
-        
-        <% if (group.created_by === userId) { %>
-          <form id="deleteForm" action="/groups/<%= group.id %>/delete" method="POST">
-            <input type="hidden" name="_method" value="DELETE">
-            <button type="button" id="deleteButton" class="button danger">Eyða hóp</button>
+      <% if (!isMember) { %>
+        <div class="join-group">
+          <form action="/groups/<%= group.id %>/join" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="button">Gerast meðlimur</button>
           </form>
-        <% } %>
+        </div>
       <% } %>
-    <% } %>
+    </div>
+  </section>
+  
+  <section class="current-round-section">
+    <h2>Umferð</h2>
     
-    <a href="/groups" class="button">Back to Groups</a>
-  </div>
+    <% if (currentRound) { %>
+      <div class="current-round">
+        <h3>Umferð #<%= currentRound.roundNumber %></h3>
+        
+        <div class="round-status <%= phase %>">
+          <% if (phase === 'pending') { %>
+            <div class="status-icon">⏳</div>
+            <div class="status-text">Opnað verður fyrir innsetningar:</div>
+          <% } else if (phase === 'input') { %>
+            <div class="status-icon">🎵</div>
+            <div class="status-text">Opið fyrir innsendingar!</div>
+          <% } else if (phase === 'voting') { %>
+            <div class="status-icon">🗳️</div>
+            <div class="status-text">Opið er fyrir kosningar!</div>
+          <% } else { %>
+            <div class="status-icon">🏆</div>
+            <div class="status-text">Umferð Lokin</div>
+          <% } %>
+        </div>
+        
+        <div class="round-schedule">
+          <div class="schedule-row">
+            <div class="schedule-label">Laga innsending:</div>
+            <div class="schedule-value">
+              <%= formatDateTimeRange(currentRound.inputOpen, currentRound.inputClose) %>
+            </div>
+          </div>
+          <div class="schedule-row">
+            <div class="schedule-label">Kosning:</div>
+            <div class="schedule-value">
+              <%= formatDateTimeRange(currentRound.votingOpen, currentRound.votingClose) %>
+            </div>
+          </div>
+        </div>
+        
+        <div id="countdown" class="countdown-container">
+          <% if (phase !== 'finished') { %>
+            <div class="countdown-label">
+              <% if (phase === 'pending') { %>
+                opnað verður fyrir laga innsendingar eftir:
+              <% } else if (phase === 'input') { %>
+                Kosning byrjar eftir:
+              <% } else if (phase === 'voting') { %>
+                Kosningu lýkur eftir:
+              <% } %>
+            </div>
+            <div id="countdown-timer" class="countdown-timer">Loading...</div>
+          <% } else { %>
+            <div class="status-complete">Umferð lokin</div>
+          <% } %>
+        </div>
+        
+        <% if (phase === 'input' && isMember) { %>
+          <div class="submission-section">
+            <% if (userSubmittedSong) { %>
+              <div class="already-submitted">
+                <h3>Þitt lag</h3>
+                <p><strong><%= userSubmittedSong.title %></strong> efdtir <%= userSubmittedSong.artist %></p>
+                <p>YouTube: <a href="<%= userSubmittedSong.youtubeUrl %>" target="_blank">Horfa á youtube</a></p>
+              </div>
+            <% } else { %>
+              <h3>Sentu inn þitt lag</h3>
+              <form action="/rounds/<%= currentRound.id %>/songs" method="POST" class="song-form">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <div>
+                  <label for="title">Titill:</label>
+                  <input type="text" id="title" name="title" required>
+                </div>
+                <div>
+                  <label for="artist">Tónlistarmaður:</label>
+                  <input type="text" id="artist" name="artist" required>
+                </div>
+                <div>
+                  <label for="youtubeUrl">YouTube URL:</label>
+                  <input type="url" id="youtubeUrl" name="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." required>
+                  <p class="help-text">Vinsamlegast settu nothæfan Youtube hlekk</p>
+                </div>
+                <button type="submit" class="button">Senda inn lag</button>
+              </form>
+            <% } %>
+          </div>
+        <% } %>
+        
+        <% if (phase === 'finished') { %>
+          <div class="results-container">
+            <h3>Niðurstöður</h3>
+            
+            <% if (songsWithVotes && songsWithVotes.length > 0) { %>
+              <% songsWithVotes.sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0)); %>
+              
+              <% songsWithVotes.forEach((song, index) => { %>
+                <div class="song-result">
+                  <span class="rank"><%= index + 1 %></span>
+                  <span class="song-title"><%= song.title %></span>
+                  <span class="song-artist">eftir <%= song.artist %></span>
+                  
+                  <% if (currentRound && currentRound.winningSongId && currentRound.winningSongId === song.id) { %>
+                    <span class="winner-badge">🏆 Sigurvegari</span>
+                  <% } %>
+                  
+                  <span class="vote-count"><%= song.voteCount || 0 %> atkvæði</span>
+                </div>
+              <% }); %>
+            <% } else { %>
+              <p>Engin lög með atkvæði í þessari umferð.</p>
+            <% } %>
+          </div>
 
-  <% if (isWinner && !nextThemeSelected) { %>
+          <% if (phase === 'finished' && songsWithVotes && songsWithVotes.length > 0 && songsWithVotes[0].voteCount > 0 && !currentRound.winnerId) { %>
+            <div class="results-action">
+              <p>Niðurstöður eru tilbúnar</p>
+              <form action="/groups/<%= group.id %>/finalize-winner" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="songId" value="<%= songsWithVotes[0].id %>">
+                <input type="hidden" name="userId" value="<%= songsWithVotes[0].submittedBy %>">
+                <input type="hidden" name="roundId" value="<%= currentRound.id %>">
+                <button type="submit" class="button success-button">Birta vinningshafa</button>
+              </form>
+            </div>
+          <% } %>
+
+          <% if (nextRound) { %>
+            <div class="next-round-container">
+              <h3>Næsta umferð #<%= nextRound.roundNumber %></h3>
+              <p>Næsta umferð hefst sjálfkrafa:</p>
+              <div id="next-round-countdown" class="countdown-timer">Hleð...</div>
+            </div>
+          <% } else if (phase === 'finished') { %>
+            <div class="next-round-info">
+              <h3>Næsta umferð</h3>
+              <p>Countdown byrjar innan skamms</p>
+            </div>
+          <% } %>
+        <% } %>
+      </div>
+    <% } else { %>
+      <div class="no-rounds">
+        <p>Engin virk umferð.</p>
+        <p>Fyrsta umferð verður stofnuð sjálfkrafa.</p>
+      </div>
+    <% } %>
+  </section>
+
+  <% if (currentRound && currentRound.winnerId && currentRound.winnerId == userId && !currentRound.nextThemeSelected) { %>
     <div id="winnerModal" class="modal">
       <div class="modal-content">
         <span class="close">&times;</span>
         <div class="winner-trophy">🏆</div>
-        <h2>Congratulations!</h2>
-        <p>Your song "<strong><%= winningRound.winningSong.title %></strong>" by <%= winningRound.winningSong.artist %> won the round!</p>
+        <h2>Til Hamingju!</h2>
+        <p>Lagið þitt "<strong><%= winningRound.winningSong ? winningRound.winningSong.title : 'Winning Song' %></strong>" vann umferðina!</p>
         
         <div class="theme-selector">
-          <h3>Choose a theme for the next round:</h3>
-          <form action="/rounds/<%= winningRound.id %>/theme" method="POST">
-            <input type="text" name="theme" required placeholder="e.g. 80's Hits, Movie Soundtracks, etc.">
-            <button type="submit" class="submit-theme">Set Theme</button>
+          <h3>Veldu þema fyrir næstu umferð</h3>
+          <form action="/groups/<%= group.id %>/theme" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="roundId" value="<%= winningRound.id %>">
+            
+            <div class="theme-options">
+            <div>
+              <input type="radio" name="themeOption" id="customTheme" value="custom"> 
+              <label for="customTheme">Velja þema</label>
+              <input type="text" id="theme" name="theme" placeholder="t.d. 'Diskó' eða 'Hip hop'" class="theme-input">
+            </div>
+  
+          <div>
+        <input type="radio" name="themeOption" id="randomTheme" value="random" checked> 
+      <label for="randomTheme">Koma mér á óvart!</label>
+    </div>
+  </div>
+            
+            <button type="submit" class="button">Velja þema!</button>
           </form>
         </div>
         
-        <p class="small">As the winner, you get to choose the theme for the next round!</p>
+        <p class="small">Sem sigurvegari færð þú að velja þemað fyrir næstu umferð</p>
       </div>
     </div>
   <% } %>
-</main>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const deleteButton = document.getElementById('deleteButton');
-    if (deleteButton) {
-      deleteButton.addEventListener('click', function() {
-        if (confirm('Ertu viss um að þú viljir eyða þessum hóp?')) {
-          document.getElementById('deleteForm').submit();
-        }
-      });
+
+ 
+
+  <script>
+    window.nextRoundInfo = (typeof nextRound !== 'undefined' && nextRound !== null) ? 
+    {
+      inputOpen: '<%= nextRound ? nextRound.inputOpen : "" %>',
+      roundNumber: '<%= nextRound ? nextRound.roundNumber : "" %>'
     }
+    : null;
+    
+    window.isWinner = "<%= (typeof isWinner !== 'undefined' && isWinner) ? 'true' : 'false' %>" === "true";
+    window.nextThemeSelected = "<%= (typeof nextThemeSelected !== 'undefined' && nextThemeSelected) ? 'true' : 'false' %>" === "true";
+    window.hasWinningRound = "<%= (typeof winningRound !== 'undefined' && winningRound) ? 'true' : 'false' %>" === "true";
 
-    setTimeout(function() {
-      const alerts = document.querySelectorAll('.alert');
-      alerts.forEach(alert => {
-        alert.style.opacity = '0';
-        setTimeout(() => alert.style.display = 'none', 500);
-      });
-    }, 5000);
-
-    const dateInputs = document.querySelectorAll('input[type="date"]');
-    dateInputs.forEach(input => {
-      if (!input.value) {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        input.valueAsDate = tomorrow;
+    document.addEventListener('DOMContentLoaded', function() {
+      
+      const showWinnerModal = window.isWinner && !window.nextThemeSelected && window.hasWinningRound;
+            
+      const modals = document.querySelectorAll('.modal');
+      
+      if (showWinnerModal && modals.length > 0) {
+        console.log('Found modals:', modals.length);
+        const winnerModal = document.getElementById('winnerModal');
+        if (winnerModal) {
+          console.log('Displaying winner modal');
+          winnerModal.style.display = 'block';
+          
+          const closeBtn = winnerModal.querySelector('.close');
+          if (closeBtn) {
+            closeBtn.onclick = function() {
+              winnerModal.style.display = 'none';
+            };
+          }
+          
+          window.onclick = function(event) {
+            if (event.target === winnerModal) {
+              winnerModal.style.display = 'none';
+            };
+          }
+        }
       }
     });
+  </script>
 
-     if (currentRound) { 
-    const countdownTimer = document.getElementById('countdown-timer');
-    if (countdownTimer) {
-      let targetTime;
-      let countdownEndMessage;
-
-      if ('<%= phase %>' === 'pending') {
-        targetTime = new Date('<%= currentRound ? currentRound.inputOpen : "" %>').getTime();
-        countdownEndMessage = 'Song submission is now open!';
-      } else if ('<%= phase %>' === 'input') {
-        targetTime = new Date('<%= currentRound ? currentRound.inputClose : "" %>').getTime();
-        countdownEndMessage = 'Song submission is now closed!';
-      } else if ('<%= phase %>' === 'voting') {
-        targetTime = new Date('<%= currentRound ? currentRound.votingClose : "" %>').getTime();
-        countdownEndMessage = 'Voting is now closed!';
-      } else {
-        targetTime = Date.now();
-        countdownEndMessage = 'Round completed';
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    let targetTime;
+    let countdownEndMessage;
+    let intervalId;
+    const phase = '<%= phase %>';
+    
+    function formatTimeRemaining(milliseconds) {
+      if (milliseconds < 0) return "Time's up!";
+      
+      const total_seconds = Math.floor(milliseconds / 1000);
+      const days = Math.floor(total_seconds / 86400);
+      const hours = Math.floor((total_seconds % 86400) / 3600);
+      const minutes = Math.floor((total_seconds % 3600) / 60);
+      const seconds = total_seconds % 60;
+      
+      if (days > 0) {
+        return `${days}d ${hours}h ${minutes}m ${seconds}s`;
       }
-
-      function updateCountdown() {
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    function updateCountdown() {
+      const countdownTimer = document.getElementById('countdown-timer');
+      if (!countdownTimer) return;
+      
+      const now = Date.now();
+      const timeRemaining = targetTime - now;
+      
+      if (timeRemaining <= 0) {
+        countdownTimer.innerHTML = countdownEndMessage || 'Time is up!';
+        countdownTimer.classList.add('time-up');
+        console.log(`Countdown ended at ${new Date().toISOString()}`);
+        
+        if (phase === 'voting') {
+          console.log('Voting period ended, refreshing page to get results...');
+          countdownTimer.innerHTML = 'Kosningu lokið - sæki niðurstöður...';
+          setTimeout(() => window.location.reload(), 3000);
+        } else if (phase !== 'finished') {
+          setTimeout(() => window.location.reload(), 3000);
+        }
+        
+        clearInterval(intervalId);
+        return;
+      }
+      
+      countdownTimer.innerHTML = formatTimeRemaining(timeRemaining);
+      
+      if (timeRemaining < 60000) {
+        countdownTimer.classList.add('time-low');
+      }
+    }
+    
+    function initializeCountdown() {
+      const countdownTimer = document.getElementById('countdown-timer');
+      if (!countdownTimer) return;
+      
+      if (phase === 'pending') {
+        targetTime = new Date('<%= currentRound ? currentRound.inputOpen : null %>').getTime();
+        countdownEndMessage = 'Nú er opið fyrir lagainnsendingar!';
+      } else if (phase === 'input') {
+        targetTime = new Date('<%= currentRound ? currentRound.inputClose : null %>').getTime();
+        countdownEndMessage = 'Lokað fyrir innsendingar, kosning að hefjast!';
+      } else if (phase === 'voting') {
+        targetTime = new Date('<%= currentRound ? currentRound.votingClose : null %>').getTime();
+        countdownEndMessage = 'Kosningu lokið!';
+      } else {
+        return; 
+      }
+      
+      updateCountdown();
+      intervalId = setInterval(updateCountdown, 1000);  
+    }
+    
+    initializeCountdown();
+    
+    const nextRoundCountdown = document.getElementById('next-round-countdown');
+    if (nextRoundCountdown && window.nextRoundInfo && window.nextRoundInfo.inputOpen) {
+      const nextInputOpen = new Date(window.nextRoundInfo.inputOpen).getTime();
+      
+      function updateNextRoundCountdown() {
         const now = Date.now();
-        if (now >= targetTime) {
-          countdownTimer.innerHTML = countdownEndMessage;
-          clearInterval(intervalId);
+        const timeRemaining = nextInputOpen - now;
+        
+        if (timeRemaining <= 0) {
+          nextRoundCountdown.innerHTML = 'Umferð að hefjast - síða að uppfærast...';
+          setTimeout(() => window.location.reload(), 3000);
           return;
         }
-
-        const diff = targetTime - now;
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-        const minutes = Math.floor((diff / (1000 * 60)) % 60);
-        const seconds = Math.floor((diff / 1000) % 60);
-
-        let display = '';
-        if (days) display += `<span class="time-unit"><span class="time-value">${days}</span><span class="time-label">days</span></span>`;
-        if (hours) display += `<span class="time-unit"><span class="time-value">${hours}</span><span class="time-label">hours</span></span>`;
-        if (minutes) display += `<span class="time-unit"><span class="time-value">${minutes}</span><span class="time-label">min</span></span>`;
-        display += `<span class="time-unit"><span class="time-value">${seconds}</span><span class="time-label">sec</span></span>`;
-
-        countdownTimer.innerHTML = display;
+        
+        nextRoundCountdown.innerHTML = formatTimeRemaining(timeRemaining);
       }
-
-      updateCountdown();
-      const intervalId = setInterval(updateCountdown, 1000);
-    }
-     } 
-
-    // Modal handling
-    const winnerModal = document.getElementById('winnerModal');
-    if (winnerModal) {
-      const closeBtn = winnerModal.querySelector('.close');
-      closeBtn.addEventListener('click', function() {
-        winnerModal.style.display = 'none';
-      });
       
-      window.addEventListener('click', function(event) {
-        if (event.target === winnerModal) {
-          winnerModal.style.display = 'none';
-        }
-      });
-      
-      // Auto-close after 5 minutes if no action taken
-      setTimeout(function() {
-        if (winnerModal && winnerModal.style.display !== 'none') {
-          winnerModal.style.display = 'none';
-        }
-      }, 5 * 60 * 1000);
+      updateNextRoundCountdown();
+      setInterval(updateNextRoundCountdown, 1000);
     }
   });
+  
+document.addEventListener('DOMContentLoaded', function() {
+  const colorAvatars = document.querySelectorAll('.avatar-color');
+  
+  colorAvatars.forEach(avatar => {
+    let username;
+    if (avatar.nextElementSibling) {
+      username = avatar.nextElementSibling.textContent.trim();
+    } else if (avatar.closest('.winner-card')) {
+      username = avatar.closest('.winner-card').querySelector('.winner-name').textContent.trim();
+    } else {
+      username = 'user' + Math.random();
+    }
+    
+    avatar.style.backgroundColor = getRandomColor(username);
+  });
+  
+  function getRandomColor(username) {
+    let hash = 0;
+    for (let i = 0; i < username.length; i++) {
+      hash = username.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+      const value = (hash >> (i * 8)) & 0xFF;
+      color += ('00' + value.toString(16)).substr(-2);
+    }
+    return color;
+  }
+});
 </script>
 
-<style>
-  /* Alert styles */
-  .alert {
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 4px;
-    transition: opacity 0.5s;
-  }
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const groupPage = document.querySelector('.group-page');
+  const groupNav = document.querySelector('.group-nav');
+  const infoSection = document.querySelector('.group-info-section');
+  const leaderboardSection = document.querySelector('.members-leaderboard-section');
+  const roundSection = document.querySelector('.current-round-section');
   
-  .alert.success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+  if (groupPage && infoSection && leaderboardSection && roundSection) {
+    groupPage.appendChild(groupNav);
+    groupPage.appendChild(infoSection);
+    groupPage.appendChild(leaderboardSection);
+    groupPage.appendChild(roundSection);
   }
-  
-  .alert.error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-  }
-  
-  /* Group info styles */
-  .group-info {
-    background-color: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-  }
-  
-  /* Current round styles */
-  .current-round {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 30px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  
-  .round-status {
-    display: flex;
-    align-items: center;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-  }
-  
-  .round-status.pending {
-    background-color: #e2e3e5;
-  }
-  
-  .round-status.input {
-    background-color: #d1ecf1;
-    color: #0c5460;
-  }
-  
-  .round-status.voting {
-    background-color: #d4edda;
-    color: #155724;
-  }
-  
-  .round-status.finished {
-    background-color: #f8f9fa;
-    color: #383d41;
-  }
-  
-  .status-icon {
-    font-size: 2rem;
-    margin-right: 15px;
-  }
-  
-  .status-text {
-    font-size: 1.2rem;
-    font-weight: bold;
-  }
-  
-  .round-schedule {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-  }
-  
-  .schedule-row {
-    display: flex;
-    margin-bottom: 8px;
-  }
-  
-  .schedule-label {
-    font-weight: bold;
-    min-width: 150px;
-  }
-  
-  /* Already submitted styles */
-  .already-submitted {
-    background-color: #d4edda;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-  }
-  
-  /* Basic reuse of existing styles */
-  .button.danger {
-    background-color: #d32f2f;
-    margin-bottom: 10px;
-  }
-  
-  .button.danger:hover {
-    background-color: #b71c1c;
-  }
-  
-  .songs-list {
-    margin-bottom: 20px;
-    list-style-type: none;
-    padding: 0;
-  }
-  
-  .song-item {
-    margin-bottom: 8px;
-    padding: 10px 15px;
-    border-radius: 4px;
-    background-color: #f5f5f5;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .vote-count {
-    font-weight: bold;
-    margin-right: 10px;
-  }
-  
-  .vote-button {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #888;
-    transition: color 0.2s;
-  }
-  
-  .vote-button:hover {
-    color: #f5a623;
-  }
-  
-  .vote-button.voted {
-    color: #f5a623;
-  }
-  
-  .vote-form {
-    display: inline;
-  }
-  
-  .submitted-by {
-    font-size: 0.8em;
-    color: #777;
-    margin-left: 8px;
-  }
-  
-  .song-form {
-    padding: 15px;
-    background-color: #f5f5f5;
-    border-radius: 8px;
-    margin-bottom: 20px;
-  }
-  
-  .song-form div {
-    margin-bottom: 10px;
-  }
-  
-  .song-form label {
-    display: block;
-    margin-bottom: 5px;
-  }
-  
-  .song-form input {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid #ddd;
-  }
-  
-  .help-text {
-    font-size: 0.8em;
-    color: #666;
-    margin-top: 2px;
-  }
-  
-  .countdown-container {
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    padding: 15px;
-    margin: 20px 0;
-    text-align: center;
-  }
-  
-  .countdown-timer {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 10px;
-    font-size: 1.2em;
-  }
-  
-  .time-unit {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 60px;
-  }
-  
-  .time-value {
-    font-size: 1.5em;
-    font-weight: bold;
-    color: #1976d2;
-  }
-  
-  .time-label {
-    font-size: 0.7em;
-    color: #666;
-    text-transform: uppercase;
-  }
-  
-  .top3-form, .rating-form {
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    padding: 15px;
-    margin: 20px 0;
-  }
-  
-  .top3-selections {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin: 15px 0;
-  }
-  
-  .top3-selection select, .rating-controls {
-    margin-top: 5px;
-    width: 100%;
-    padding: 8px;
-  }
-  
-  .rating-list {
-    list-style: none;
-    padding: 0;
-  }
-  
-  .rating-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-  }
-  
-  .rating-controls {
-    display: flex;
-    gap: 10px;
-  }
-  
-  .rating-controls input {
-    display: none;
-  }
-  
-  .rating-controls label {
-    display: inline-block;
-    width: 30px;
-    height: 30px;
-    line-height: 30px;
-    text-align: center;
-    border-radius: 50%;
-    background-color: #e0e0e0;
-    cursor: pointer;
-  }
-  
-  .rating-controls input:checked + label {
-    background-color: #1976d2;
-    color: white;
-  }
-  
-  .rating-disabled {
-    color: #999;
-    font-style: italic;
-  }
-  
-  .rank {
-    display: inline-block;
-    width: 24px;
-    height: 24px;
-    line-height: 24px;
-    text-align: center;
-    border-radius: 50%;
-    background-color: #1976d2;
-    color: white;
-    margin-right: 10px;
-  }
-  
-  .rounds-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 15px;
-    margin-top: 15px;
-  }
-  
-  .round-card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 15px;
-    background-color: #f8f9fa;
-  }
-  
-  .highlight {
-    color: #1976d2;
-    font-weight: bold;
-  }
-  
-  .button.small {
-    padding: 5px 10px;
-    font-size: 0.9em;
-  }
-  
-  .create-round {
-    background-color: #f5f5f5;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 20px 0;
-  }
-  
-  .members-list {
-    columns: 2;
-    column-gap: 20px;
-  }
-  
-  .voting-button-container {
-    margin: 20px 0;
-    text-align: center;
-  }
+});
+</script>
 
-  .voting-button {
-    display: inline-block;
-    background-color: #1976d2;
-    color: white;
-    font-size: 1.1em;
-    padding: 12px 24px;
-    text-decoration: none;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-  }
-
-  .voting-button:hover {
-    background-color: #1565c0;
-  }
-  
-  .results-container {
-    margin-top: 15px;
-  }
-
-  .song-result {
-    display: flex;
-    align-items: center;
-    padding: 12px;
-    margin-bottom: 8px;
-    background-color: #f8f9fa;
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-
-  .rank {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    background-color: #1976d2;
-    color: white;
-    border-radius: 50%;
-    margin-right: 15px;
-    font-weight: bold;
-  }
-
-  .song-title {
-    font-weight: bold;
-    margin-right: 10px;
-  }
-
-  .song-artist {
-    color: #666;
-    margin-right: auto;
-  }
-
-  .vote-count, .rating-average {
-    font-weight: bold;
-    color: #1976d2;
-    margin-left: 10px;
-  }
-
-  .rating-count {
-    color: #666;
-    font-size: 0.9em;
-    margin-left: 5px;
-  }
-  
-  .button.admin {
-    background-color: #5c6bc0;
-    color: white;
-    margin-bottom: 10px;
-  }
-  
-  .button.admin:hover {
-    background-color: #3f51b5;
-  }
-  
-  @media (max-width: 768px) {
-    .members-list {
-      columns: 1;
-    }
-  }
-
-  /* Leaderboard styles */
-  .leaderboard-section {
-    margin: 30px 0;
-  }
-  
-  .leaderboard table {
-    width: 100%;
-    border-collapse: collapse;
-    background-color: white;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-  
-  .leaderboard th, .leaderboard td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-  }
-  
-  .leaderboard th {
-    background-color: #f5f5f5;
-    font-weight: bold;
-    color: #333;
-  }
-  
-  .leaderboard tr:last-child td {
-    border-bottom: none;
-  }
-  
-  .leaderboard tr.current-user {
-    background-color: #e3f2fd;
-    font-weight: bold;
-  }
-  
-  /* Modal styles */
-  .modal {
-    display: block;
-    position: fixed;
-    z-index: 100;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.7);
-  }
-  
-  .modal-content {
-    background-color: white;
-    margin: 10% auto;
-    padding: 30px;
-    width: 80%;
-    max-width: 500px;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    text-align: center;
-    animation: modalSlideIn 0.3s ease-out;
-  }
-  
-  @keyframes modalSlideIn {
-    from {transform: translateY(-50px); opacity: 0;}
-    to {transform: translateY(0); opacity: 1;}
-  }
-  
-  .close {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  
-  .close:hover {
-    color: #333;
-  }
-  
-  .winner-trophy {
-    font-size: 50px;
-    margin-bottom: 10px;
-    animation: trophyBounce 1s infinite alternate;
-  }
-  
-  @keyframes trophyBounce {
-    from {transform: scale(1);}
-    to {transform: scale(1.1);}
-  }
-  
-  .theme-selector {
-    margin: 20px 0;
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-  }
-  
-  .theme-selector input[type="text"] {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-  }
-  
-  .submit-theme {
-    background-color: #4caf50;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-  
-  .submit-theme:hover {
-    background-color: #45a049;
-  }
-  
-  p.small {
-    font-size: 0.9em;
-    color: #666;
-  }
-</style>
+</main>
 
 <%- include('partials/footer') %>

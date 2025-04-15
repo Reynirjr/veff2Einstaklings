@@ -1,49 +1,50 @@
 <%- include('partials/header') %>
 
 <main>
-  <h1>Round #<%= round.roundNumber %> - <%= round.Group.name %></h1>
+  <h1>Umferð #<%= round.roundNumber %> - <%= round.Group.name %></h1>
   
   <div class="round-details">
-    <p><strong>Theme:</strong> <%= round.theme || 'No specific theme' %></p>
+    <p><strong>þema:</strong> <%= round.theme || 'No specific theme' %></p>
     
     <div class="schedule">
-      <h2>Schedule</h2>
-      <p><strong>Song Submission:</strong> <%= round.inputOpen.toLocaleString() %> - <%= round.inputClose.toLocaleString() %></p>
-      <p><strong>Voting:</strong> <%= round.votingOpen.toLocaleString() %> - <%= round.votingClose.toLocaleString() %></p>
+      <h2>Tímasetningar</h2>
+      <p><strong>Laga innsendingar:</strong> <%= round.inputOpen.toLocaleString() %> - <%= round.inputClose.toLocaleString() %></p>
+      <p><strong>Kosning:</strong> <%= round.votingOpen.toLocaleString() %> - <%= round.votingClose.toLocaleString() %></p>
       
       <div class="status-indicator <%= phase %>">
         <% if (phase === 'pending') { %>
-          <p>Round will start soon</p>
+          <p>Umferð byrjar innan skamms</p>
         <% } else if (phase === 'input') { %>
-          <p>Song submission is open!</p>
+          <p>Opið er fyrir lagainnseningar!</p>
         <% } else if (phase === 'voting') { %>
-          <p>Voting is now open!</p>
+          <p>Kosning er opin!</p>
         <% } else { %>
-          <p>This round has ended</p>
+          <p>Þessi umferð er lokin</p>
         <% } %>
       </div>
     </div>
     
     <% if (phase === 'input') { %>
       <div class="song-submission">
-        <h2>Submit Your Song</h2>
+        <h2>Senda inn lag</h2>
         <% if (userSubmittedSong) { %>
           <div class="already-submitted">
-            <p>You've already submitted: <strong><%= userSubmittedSong.title %></strong> by <%= userSubmittedSong.artist %></p>
+            <p>Þú hefur nú þegar sent inn lag: <strong><%= userSubmittedSong.title %></strong> by <%= userSubmittedSong.artist %></p>
           </div>
         <% } else { %>
           <form action="/rounds/<%= round.id %>/songs" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div>
-              <label for="title">Song Title:</label>
+              <label for="title">Titill:</label>
               <input type="text" name="title" id="title" required>
             </div>
             
             <div>
-              <label for="artist">Artist:</label>
+              <label for="artist">Tónlistarmaður:</label>
               <input type="text" name="artist" id="artist" required>
             </div>
             
-            <button type="submit" class="button">Submit Song</button>
+            <button type="submit" class="button">Senda inn lag</button>
           </form>
         <% } %>
       </div>
@@ -60,7 +61,7 @@
                   <span class="rank">#<%= index + 1 %></span>
                   <strong><%= song.title %></strong> - <%= song.artist %>
                   <% if (phase === 'finished') { %>
-                    <span class="submitted-by">Added by: <%= song.submitter.username %></span>
+                    <span class="submitted-by">Sent inn af: <%= song.submitter.username %></span>
                   <% } %>
                 </div>
                 <div class="song-votes">
@@ -77,61 +78,16 @@
             <% }); %>
           </ul>
         <% } else { %>
-          <p>No songs have been submitted yet.</p>
+          <p>Engin lög hafa verið sent inn.</p>
         <% } %>
       </div>
     <% } %>
   </div>
   
   <div class="actions">
-    <a href="/groups/<%= round.Group.id %>" class="button">Back to Group</a>
+    <a href="/groups/<%= round.Group.id %>" class="button">til baka</a>
   </div>
 </main>
 
-<style>
-  /* ...reuse existing styles from group.ejs... */
-  
-  .status-indicator {
-    padding: 10px 15px;
-    border-radius: 8px;
-    margin: 15px 0;
-    text-align: center;
-    font-weight: bold;
-  }
-  
-  .status-indicator.pending {
-    background-color: #e0e0e0;
-    color: #555;
-  }
-  
-  .status-indicator.input {
-    background-color: #e3f2fd;
-    color: #0d47a1;
-  }
-  
-  .status-indicator.voting {
-    background-color: #e8f5e9;
-    color: #1b5e20;
-  }
-  
-  .status-indicator.finished {
-    background-color: #f5f5f5;
-    color: #333;
-  }
-  
-  .already-submitted {
-    background-color: #e8f5e9;
-    padding: 10px 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-  }
-  
-  .schedule {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-  }
-</style>
 
 <%- include('partials/footer') %>

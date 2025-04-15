@@ -3,20 +3,14 @@
 <main class="song-detail-page">
   <div class="song-header">
     <h1><%= song.title %></h1>
-    <h2>By <%= song.artist %></h2>
-    <p>Submitted by: <%= song.submitter.username %></p>
+    <h2>Eftir <%= song.artist %></h2>
   </div>
   
   <div class="video-container">
-    <iframe 
-      width="560" 
-      height="315" 
-      src="https://www.youtube.com/embed/<%= youtubeVideoId %>?si=aI72mvCtodA75s7C" 
-      title="YouTube video player" 
-      frameborder="0" 
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/<%= youtubeVideoId %>?si=aI72mvCtodA75s7C" 
+      title="YouTube video player" frameborder="0" 
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-      referrerpolicy="strict-origin-when-cross-origin" 
-      allowfullscreen>
+      referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
     </iframe>
   </div>
   
@@ -26,15 +20,17 @@
         <p>Voting information not available</p>
       <% } else if (group.votingMethod === 'single_vote') { %>
         <form action="/songs/<%= song.id %>/vote" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <input type="hidden" name="voteType" value="single">
           <input type="hidden" name="returnTo" value="/groups/<%= song.groupId %>/voting">
           <button type="submit" class="vote-button <%= userVote ? 'voted' : '' %>">
-            <%= userVote ? 'Change Vote to This Song' : 'Vote for This Song' %>
+            <%= userVote ? 'Breyta atkvæði í þetta lag' : 'Kjósa þetta lag' %>
           </button>
         </form>
       <% } else if (group.votingMethod === 'rating') { %>
         <form action="/songs/<%= song.id %>/vote" method="POST" class="rating-form">
-          <h3>Rate this song (1-10):</h3>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <h3>Gefðu þessu lagi einkunn (1-10):</h3>
           <div class="rating-stars">
             <% for (let i = 1; i <= 10; i++) { %>
               <input type="radio" name="rating" id="rating-<%= i %>" value="<%= i %>" 
@@ -44,157 +40,65 @@
           </div>
           <input type="hidden" name="voteType" value="rating">
           <input type="hidden" name="returnTo" value="/groups/<%= song.groupId %>/voting">
-          <button type="submit" class="submit-rating">Submit Rating</button>
+          <button type="submit" class="submit-rating">Senda einkunn</button>
         </form>
       <% } else if (group.votingMethod === 'top_3') { %>
-        <!-- Top 3 voting code would go here -->
-        <p>Top 3 ranking is not implemented yet</p>
+        <form action="/songs/<%= song.id %>/vote" method="POST" class="rank-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <h3>Raðaðu þessu lagi í þinn Top 3:</h3>
+          
+          <div class="rank-selection">
+            <select name="rank" required>
+              <option value="" disabled <%= !userVote ? 'selected' : '' %>>Veldu röð...</option>
+              <option value="1" <%= userVote === 1 ? 'selected' : '' %>>1. sæti (3 stig)</option>
+              <option value="2" <%= userVote === 2 ? 'selected' : '' %>>2. sæti (2 stig)</option>
+              <option value="3" <%= userVote === 3 ? 'selected' : '' %>>3. sæti (1 stig)</option>
+            </select>
+            
+            <% if (userVote) { %>
+              <div class="current-rank">
+                Núverandi staða er #<%= userVote %> valið þitt
+              </div>
+            <% } %>
+          </div>
+          
+          <div class="rank-info">
+            <p>Valið þitt #1 fær 3 stig, #2 fær 2 stig og #3 fær 1 stig.</p>
+            <% if (availableRanks && availableRanks.length < 3) { %>
+              <p class="available-ranks">
+                <strong>Athugaðu:</strong> Þú hefur þegar notað raðir: 
+                <%= [1,2,3].filter(r => !availableRanks.includes(r)).join(', ') %>
+              </p>
+            <% } %>
+          </div>
+          
+          <input type="hidden" name="voteType" value="top_3">
+          <input type="hidden" name="returnTo" value="/groups/<%= song.groupId %>/voting">
+          <button type="submit" class="submit-ranking">Vista röðun</button>
+        </form>
       <% } %>
     </div>
   <% } else if (song.submittedBy === userId) { %>
     <div class="own-song-notice">
-      <p>This is your submitted song. You can't vote for your own song.</p>
+      <p>Þetta er lagið sem þú sentir. Þú getur ekki kosið þitt eigið lag.</p>
     </div>
   <% } else if (phase !== 'voting') { %>
     <div class="voting-closed">
-      <p>Voting is not currently open for this round.</p>
+      <p>Kosning er ekki opin fyrir þessa umferð.</p>
     </div>
   <% } %>
   
   <div class="navigation">
-    <a href="/groups/<%= song.groupId %>/voting" class="button">Back to Voting Page</a>
-    <a href="/groups/<%= song.groupId %>" class="button">Back to Group</a>
+    <% if (prevSong) { %>
+      <a href="/songs/<%= prevSong.id %>" class="button nav-button prev-button">« Fyrra Lag</a>
+    <% } %>
+    
+    <a href="/groups/<%= song.groupId %>/voting" class="button">Til baka</a>
+    
+    <% if (nextSong) { %>
+      <a href="/songs/<%= nextSong.id %>" class="button nav-button next-button">Næsta Lag »</a>
+    <% } %>
   </div>
 </main>
-
-<style>
-  .song-detail-page {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-  
-  .song-header {
-    margin-bottom: 30px;
-  }
-  
-  .song-header h1 {
-    margin-bottom: 5px;
-  }
-  
-  .song-header h2 {
-    color: #666;
-    font-size: 1.2em;
-    margin-top: 0;
-  }
-  
-  .video-container {
-    position: relative;
-    padding-bottom: 56.25%; /* 16:9 aspect ratio */
-    height: 0;
-    overflow: hidden;
-    margin-bottom: 30px;
-  }
-  
-  .video-container iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  }
-  
-  .voting-section {
-    background-color: #f5f5f5;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 30px;
-  }
-  
-  .voting-section h3 {
-    margin-top: 0;
-  }
-  
-  .vote-button {
-    background-color: #1976d2;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.2s;
-  }
-  
-  .vote-button:hover {
-    background-color: #1565c0;
-  }
-  
-  .vote-button.voted {
-    background-color: #4caf50;
-  }
-  
-  .rating-form .rating-stars {
-    display: flex;
-    gap: 5px;
-    margin: 15px 0;
-  }
-  
-  .rating-form input[type="radio"] {
-    display: none;
-  }
-  
-  .rating-form label {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 40px;
-    height: 40px;
-    background-color: #e0e0e0;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-  
-  .rating-form input[type="radio"]:checked + label {
-    background-color: #ffc107;
-    color: black;
-  }
-  
-  .rank-form select {
-    padding: 8px;
-    font-size: 16px;
-    margin: 10px 0;
-    width: 100%;
-    max-width: 300px;
-  }
-  
-  .navigation {
-    display: flex;
-    gap: 15px;
-  }
-  
-  .button {
-    display: inline-block;
-    background-color: #f0f0f0;
-    color: #333;
-    padding: 10px 15px;
-    text-decoration: none;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-  }
-  
-  .button:hover {
-    background-color: #e0e0e0;
-  }
-  
-  .own-song-notice, .voting-closed, .no-ranks {
-    padding: 15px;
-    background-color: #fff3cd;
-    border: 1px solid #ffeeba;
-    border-radius: 4px;
-    margin-bottom: 30px;
-  }
-</style>
 
 <%- include('partials/footer') %>

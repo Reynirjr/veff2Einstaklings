@@ -44,7 +44,8 @@ if (isDev) {
         scriptSrc: ["'self'", "'unsafe-inline'", "https://www.youtube.com", "https://s.ytimg.com"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com"],
-        imgSrc: ["'self'", "https://i.ytimg.com", "data:"]
+        imgSrc: ["'self'", "https://i.ytimg.com", "https://res.cloudinary.com", "data:"],
+        connectSrc: ["'self'", "https://api.cloudinary.com"]
       }
     }
   }));

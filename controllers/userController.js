@@ -10,20 +10,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../public/uploads/profiles');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, `profile-${req.user.id}-${uniqueSuffix}${ext}`);
-  }
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({ 
   storage: storage,
@@ -52,14 +39,17 @@ exports.uploadProfilePicture = (req, res, next) => {
     
     if (req.file) {
       try {
-        const result = await cloudinary.uploader.upload(req.file.path, {
+        const fileBuffer = req.file.buffer;
+        const fileType = req.file.mimetype;
+        const dataURI = `data:${fileType};base64,${fileBuffer.toString('base64')}`;
+        
+        const result = await cloudinary.uploader.upload(dataURI, {
           folder: 'profile_pictures',
           public_id: `user_${req.user.id}_${Date.now()}`,
         });
         
         req.cloudinaryUrl = result.secure_url;
         
-        fs.unlinkSync(req.file.path);
       } catch (error) {
         console.error('Cloudinary upload error:', error);
         req.flash('error', 'Error uploading to cloud storage');

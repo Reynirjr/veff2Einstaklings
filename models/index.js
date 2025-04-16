@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
+const { native } = require('pg');
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
 const db = {};
@@ -44,6 +45,20 @@ if (process.env.DATABASE_URL && env === 'production') {
       timeout: 5000
     },
     logging: false
+  });
+} else if (process.env.DB_HOST && (process.env.DB_HOST.includes('railway') || process.env.DB_HOST.includes('rlwy'))) {
+  const connectionString = `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}`
+    + `@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}?sslmode=no-verify`;
+  sequelize = new Sequelize(connectionString, {
+    dialect: 'postgres',
+    dialectModule: native,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    },
+    logging: false  
   });
 } else if (config.use_env_variable) {
   sequelize = new Sequelize(process.env[config.use_env_variable], config);

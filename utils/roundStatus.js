@@ -133,7 +133,6 @@ async function checkRoundStatuses() {
     for (const round of inputRounds) {
       round.status = 'input';
       await round.save();
-      console.log(`Round ${round.id} of group ${round.groupId} status updated to input`);
     }
     
     const votingRounds = await Round.findAll({
@@ -146,7 +145,6 @@ async function checkRoundStatuses() {
     for (const round of votingRounds) {
       round.status = 'voting';
       await round.save();
-      console.log(`Round ${round.id} of group ${round.groupId} status updated to voting`);
     }
     
     const finishedRounds = await Round.findAll({
@@ -200,7 +198,6 @@ async function checkRoundStatuses() {
       where: sequelize.literal('(SELECT COUNT("Rounds"."id") FROM "Rounds" WHERE "Rounds"."groupId" = "Group"."id") = 0')
     });
     
-    console.log(`Found ${groupsWithoutRounds.length} groups without rounds`);
     
     for (const group of groupsWithoutRounds) {
       await createFirstRound(group);
@@ -220,7 +217,6 @@ async function createNextRound(finishedRound) {
       return;
     }
     
-    console.log(`Creating next round for group ${group.id} after round ${finishedRound.roundNumber}`);
     
     let nextInputOpen;
     const votingDay = group.votingDay || 'friday'; 
@@ -247,7 +243,6 @@ async function createNextRound(finishedRound) {
         break;
         
       default:
-        console.log(`Group ${group.id} has no valid recurrence setting`);
         return;
     }
     
@@ -274,7 +269,6 @@ async function createNextRound(finishedRound) {
       status: 'pending'
     });
     
-    console.log(`New round ${finishedRound.roundNumber + 1} created for group ${group.id}`);
   } catch (error) {
     console.error('Error creating next round:', error);
   }
@@ -282,7 +276,6 @@ async function createNextRound(finishedRound) {
 
 async function createFirstRound(group) {
   try {
-    console.log(`Creating first round for group ${group.id}`);
     
     const now = new Date();
     let inputOpen = new Date();
@@ -321,14 +314,12 @@ async function createFirstRound(group) {
       status: initialStatus
     });
     
-    console.log(`First round created for group ${group.id}`);
   } catch (error) {
     console.error('Error creating first round for group:', error);
   }
 }
 
 function startRoundStatusChecker() {
-  console.log('Starting round status checker...');
   
   checkRoundStatuses();
   

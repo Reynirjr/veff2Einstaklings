@@ -227,7 +227,6 @@ router.post('/rounds/:id/theme', authMiddleware, async (req, res) => {
         const userId = req.user.id;
         const { theme } = req.body;
         
-        console.log(`Setting theme for round ${roundId}: ${theme} by user ${userId}`);
         
         const round = await Round.findByPk(roundId, {
             include: [{ model: Group, as: 'group' }]
@@ -248,11 +247,9 @@ router.post('/rounds/:id/theme', authMiddleware, async (req, res) => {
         const group = round.group;
         group.theme = theme;
         await group.save();
-        console.log(`Group ${group.id} theme updated to "${theme}"`);
         
         round.nextThemeSelected = true;
         await round.save();
-        console.log(`Round ${round.id} marked as theme selected`);
         
         req.flash('success', 'You have set the theme for the next round!');
         res.redirect(`/groups/${round.groupId}`);
@@ -265,9 +262,6 @@ router.post('/rounds/:id/theme', authMiddleware, async (req, res) => {
 router.post('/rounds/:id/update-times', authMiddleware, async (req, res) => {
   try {
     const isJson = req.get('Content-Type') === 'application/json';
-    
-    console.log('Update times route hit with ' + (isJson ? 'JSON' : 'form') + ' data');
-    console.log('Request body:', req.body);
     
     const roundId = req.params.id;
     const { inputOpen, inputClose, votingClose, groupId } = req.body;
@@ -287,7 +281,6 @@ router.post('/rounds/:id/update-times', authMiddleware, async (req, res) => {
       }
     }
     
-    console.log('Found round:', round.id, 'for group:', round.groupId);
     
     const isAdmin = await GroupUser.findOne({
       where: {
@@ -312,12 +305,7 @@ router.post('/rounds/:id/update-times', authMiddleware, async (req, res) => {
     const votingOpenDate = new Date(inputClose); 
     const votingCloseDate = new Date(votingClose);
     
-    console.log('Time values:', {
-      inputOpenDate,
-      inputCloseDate,
-      votingOpenDate,
-      votingCloseDate
-    });
+   
     
     if (inputOpenDate >= inputCloseDate) {
       if (isJson) {
@@ -354,16 +342,7 @@ router.post('/rounds/:id/update-times', authMiddleware, async (req, res) => {
       round.status = 'finished';
     }
     
-    console.log('Updating round with new values:', {
-      inputOpen: round.inputOpen,
-      inputClose: round.inputClose,
-      votingOpen: round.votingOpen,
-      votingClose: round.votingClose,
-      status: round.status
-    });
-    
     await round.save();
-    console.log('Round updated successfully!');
     
     if (isJson) {
       return res.json({ success: 'Round times updated successfully' });
@@ -397,7 +376,6 @@ router.post('/rounds/:id/finalize', authMiddleware, async (req, res) => {
       return res.redirect('/groups');
     }
     
-    console.log(`Showing results for round ${roundId} (group: ${round.groupId})`);
     
     if (round.status === 'finished' && round.winnerId && round.winningSongId) {
       return res.redirect(`/groups/${round.groupId}`);

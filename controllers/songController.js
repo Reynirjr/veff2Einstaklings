@@ -165,16 +165,16 @@ exports.finalizeVoting = async (req, res) => {
           userScore.score += 1;
           userScore.roundsWon += 1;
           await userScore.save();
-          console.log(`Updated existing score: userId=${winnerId}, score=${userScore.score}, roundsWon=${userScore.roundsWon}`);
+          console.log(`uppfært`);
         } else {
-          console.log(`Created new score: userId=${winnerId}, score=1, roundsWon=1`);
+          console.log(`uppfært`);
         }
       } catch (error) {
-        console.error('Error updating user score:', error);
+        console.error('naði ekki að uppfæra', error);
       }
     }
     
-    req.flash('success', 'Voting has been finalized!');
+    req.flash('YAY, Kosningar finalized');
     res.redirect(`/groups/${round.groupId}`);
   } catch (error) {
     console.error('Error finalizing voting:', error);

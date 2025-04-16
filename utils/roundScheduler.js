@@ -39,7 +39,6 @@ async function scheduleNextRound(finishedRoundId) {
     const group = finishedRound.group;
     
     if (group.votingRecurrence === 'none') {
-      console.log(`Group ${group.id} has recurrence set to 'none'. Not scheduling a next round.`);
       return null;
     }
     
@@ -79,9 +78,6 @@ async function scheduleNextRound(finishedRoundId) {
       votingOpen: votingOpen,
       votingClose: votingClose
     });
-    
-    console.log(`New round ${newRound.id} (round #${newRound.roundNumber}) scheduled for group ${group.id}`);
-    console.log(`Next round starts: ${inputOpen.toISOString()}`);
     
     return newRound;
   } catch (error) {

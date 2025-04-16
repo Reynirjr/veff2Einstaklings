@@ -592,18 +592,12 @@ router.post('/groups/:id/theme', authMiddleware, async (req, res) => {
     const userId = req.user.id;
     const { roundId, themeOption, theme } = req.body;
     
-    console.log(`Theme selection for group ${groupId}, round ${roundId}`);
-    console.log(`User ${userId} selected option: ${themeOption}, theme: ${theme}`);
-    
     const round = await Round.findByPk(roundId);
     if (!round) {
-      req.flash('error', 'Round not found');
       return res.redirect(`/groups/${groupId}`);
     }
     
     if (parseInt(round.winnerId) !== parseInt(userId)) {
-      console.log(`User ${userId} attempted to set theme but is not the winner (winner is ${round.winnerId})`);
-      req.flash('error', 'Only the winner can set the theme');
       return res.redirect(`/groups/${groupId}`);
     }
     
@@ -617,7 +611,6 @@ router.post('/groups/:id/theme', authMiddleware, async (req, res) => {
         'Reggae Vibes', 'Latin Beats', 'K-pop', 'Classical Masterpieces'
       ];
       newTheme = themes[Math.floor(Math.random() * themes.length)];
-      console.log(`Random theme selected: ${newTheme}`);
     }
     
     await sequelize.query(`
@@ -629,8 +622,6 @@ router.post('/groups/:id/theme', authMiddleware, async (req, res) => {
       replacements: { roundId }
     });
     
-    const updatedRound = await Round.findByPk(roundId);
-    console.log(`Round ${roundId} nextThemeSelected updated to: ${updatedRound.nextThemeSelected}`);
     
     await Group.update(
       { theme: newTheme },
@@ -676,9 +667,7 @@ router.post('/groups/:id/debug/force-win', authMiddleware, async (req, res) => {
       req.flash('error', 'No finished round found to repair');
       return res.redirect(`/groups/${groupId}`);
     }
-    
-    console.log(`Manually fixing winner for round ${round.id}`);
-    
+        
     const songs = await Song.findAll({
       where: { roundId: round.id },
       include: [
@@ -746,7 +735,6 @@ router.post('/groups/:id/debug/force-win', authMiddleware, async (req, res) => {
       }
     });
     
-    console.log('UserScore after update:', scores);
     
     req.flash('success', 'Winner updated successfully!');
     return res.redirect(`/groups/${groupId}`);
@@ -827,8 +815,7 @@ router.post('/groups/:id/finalize-winner', authMiddleware, async (req, res) => {
     const groupId = req.params.id;
     const { songId, userId, roundId } = req.body;
     
-    console.log(`Direct winner update requested for group ${groupId}, round ${roundId}`);
-    console.log(`Winner songId: ${songId}, userId: ${userId}`);
+    console.log(`Sigurlag songId: ${songId}, userId: ${userId}`);
     
     await sequelize.query(`
       UPDATE "Rounds"
@@ -874,7 +861,6 @@ router.post('/groups/:id/finalize-winner', authMiddleware, async (req, res) => {
       }
     });
     
-    console.log('UserScore after direct update:', scores);
     
     req.flash('success', 'Vinningshafi hefur verið uppfærður!');
     return res.redirect(`/groups/${groupId}`);

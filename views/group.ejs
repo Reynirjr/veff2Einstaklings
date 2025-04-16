@@ -333,10 +333,8 @@
       const modals = document.querySelectorAll('.modal');
       
       if (showWinnerModal && modals.length > 0) {
-        console.log('Found modals:', modals.length);
         const winnerModal = document.getElementById('winnerModal');
         if (winnerModal) {
-          console.log('Displaying winner modal');
           winnerModal.style.display = 'block';
           
           const closeBtn = winnerModal.querySelector('.close');
@@ -388,10 +386,8 @@
       if (timeRemaining <= 0) {
         countdownTimer.innerHTML = countdownEndMessage || 'Time is up!';
         countdownTimer.classList.add('time-up');
-        console.log(`Countdown ended at ${new Date().toISOString()}`);
         
         if (phase === 'voting') {
-          console.log('Voting period ended, refreshing page to get results...');
           countdownTimer.innerHTML = 'Kosningu lokið - sæki niðurstöður...';
           setTimeout(() => window.location.reload(), 3000);
         } else if (phase !== 'finished') {

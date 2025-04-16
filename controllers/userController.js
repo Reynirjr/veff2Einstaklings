@@ -2,6 +2,13 @@ const { User, Song, Group, Round, UserScore, sequelize } = require('../models');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -32,7 +39,7 @@ const upload = multer({
 exports.uploadProfilePicture = (req, res, next) => {
   const csrfToken = req.body && req.body._csrf;
   
-  upload(req, res, function(err) {
+  upload(req, res, async function(err) {
     if (err) {
       console.error('Multer error:', err);
       req.flash('error', 'Error uploading file: ' + err.message);
@@ -41,6 +48,23 @@ exports.uploadProfilePicture = (req, res, next) => {
     
     if (csrfToken) {
       req.body._csrf = csrfToken;
+    }
+    
+    if (req.file) {
+      try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'profile_pictures',
+          public_id: `user_${req.user.id}_${Date.now()}`,
+        });
+        
+        req.cloudinaryUrl = result.secure_url;
+        
+        fs.unlinkSync(req.file.path);
+      } catch (error) {
+        console.error('Cloudinary upload error:', error);
+        req.flash('error', 'Error uploading to cloud storage');
+        return res.redirect('/users/' + req.params.id + '/edit');
+      }
     }
     
     next();
@@ -123,14 +147,12 @@ exports.updateUserProfile = async (req, res) => {
     const { bio, imagePosition } = req.body;
     const updateData = { bio };
     
-    if (req.file) {
-      const imagePath = `/uploads/profiles/${req.file.filename}`;
-      updateData.profilePicture = imagePath;
+    if (req.cloudinaryUrl) {
+      updateData.profilePicture = req.cloudinaryUrl;
       
       if (imagePosition) {
         try {
           const positionData = JSON.parse(imagePosition);
-    
           updateData.profilePicturePosition = JSON.stringify(positionData);
         } catch (err) {
           console.error('Error parsing image position data:', err);

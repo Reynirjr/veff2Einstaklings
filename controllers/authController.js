@@ -1,93 +1,67 @@
-const { User } = require('../models');
+'use strict';
+
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
+const { User } = require('../models');
+const { issueToken, clearToken } = require('../middleware/auth');
 
 exports.getSignup = (req, res) => {
-    res.render('signup', { errors: {}, formData: {} });
+  res.render('signup', { errors: {}, formData: {} });
 };
-  
+
 exports.getLogin = (req, res) => {
-  const signupSuccess = req.query.signup === 'success';
-  const error = req.query.error;
-  res.render('login', { signupSuccess, error });
+  res.render('login', {
+    signupSuccess: req.query.signup === 'success',
+    error: mapLoginError(req.query.error),
+  });
 };
 
 exports.signup = async (req, res) => {
-  console.log('Signup request body:', req.body);
-  
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    console.log('Validation errors:', errors.array());
-    const errorObj = {};
-    errors.array().forEach(err => {
-      if (!errorObj[err.param]) {
-        errorObj[err.param] = err.msg;
-      }
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    const errors = {};
+    result.array().forEach((e) => {
+      const key = e.path || e.param;
+      if (!errors[key]) errors[key] = e.msg;
     });
-    console.log('Error object being sent to view:', errorObj);
-    return res.status(400).render('signup', { 
-      errors: errorObj, 
-      formData: req.body || {} 
-    });
+    return res.status(400).render('signup', { errors, formData: req.body || {} });
   }
-  
-  try {
-    const { email, password, username } = req.body;
-    
-    const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
-      return res.render('signup', { 
-        errors: { email: 'User already exists' }, 
-        formData: req.body || {} 
-      });
-    }
-    
-    const salt = await bcrypt.genSalt(10);
-    const password_hash = await bcrypt.hash(password, salt);
-    
-    await User.create({
-      email,
-      password_hash,
-      username
-    });
-    
-    res.redirect('/login?signup=success');
-  } catch (error) {
-    console.error('Signup error details:', error);
-    res.render('signup', { 
-      errors: { server: 'Server error, please try again' }, 
-      formData: req.body || {} 
-    });
+
+  const { email, password, username } = req.body;
+  const existing = await User.findOne({ where: { email } });
+  if (existing) {
+    return res
+      .status(400)
+      .render('signup', { errors: { email: 'User already exists' }, formData: req.body });
   }
+
+  const password_hash = await bcrypt.hash(password, 10);
+  await User.create({ email, password_hash, username });
+  res.redirect('/login?signup=success');
 };
 
 exports.login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.redirect('/login?error=invalid');
-    }
-    
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      return res.redirect('/login?error=invalid');
-    }
-    
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: '1h'
-    });
-    
-    res.cookie('token', token, { 
-      httpOnly: true,
-      maxAge: 3600000 
-    });
-    
-    res.redirect('/');
-  } catch (error) {
-    console.error(error);
-    res.redirect('/login?error=server');
+  const { email, password } = req.body;
+  const user = await User.findOne({ where: { email } });
+  if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+    return res.redirect('/login?error=invalid');
   }
+  issueToken(res, user);
+  res.redirect('/');
 };
+
+exports.logout = (req, res) => {
+  clearToken(res);
+  res.redirect('/');
+};
+
+function mapLoginError(code) {
+  switch (code) {
+    case 'invalid':
+      return 'Rangt netfang eða lykilorð.';
+    case 'unauthorized':
+      return 'Þú þarft að skrá þig inn.';
+    default:
+      return null;
+  }
+}

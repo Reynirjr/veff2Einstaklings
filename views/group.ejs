@@ -14,18 +14,6 @@
     </div>
   </div>
 
-  <% if (successMessage) { %>
-    <div class="alert success">
-      <%= successMessage %>
-    </div>
-  <% } %>
-  
-  <% if (errorMessage) { %>
-    <div class="alert error">
-      <%= errorMessage %>
-    </div>
-  <% } %>
-  
   <section class="group-info-section">
     <div class="group-info">
       <h2>Um Hópinn</h2>
@@ -221,8 +209,6 @@
             <h3>Niðurstöður</h3>
             
             <% if (songsWithVotes && songsWithVotes.length > 0) { %>
-              <% songsWithVotes.sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0)); %>
-              
               <% songsWithVotes.forEach((song, index) => { %>
                 <div class="song-result">
                   <span class="rank"><%= index + 1 %></span>
@@ -240,19 +226,6 @@
               <p>Engin lög með atkvæði í þessari umferð.</p>
             <% } %>
           </div>
-
-          <% if (phase === 'finished' && songsWithVotes && songsWithVotes.length > 0 && songsWithVotes[0].voteCount > 0 && !currentRound.winnerId) { %>
-            <div class="results-action">
-              <p>Niðurstöður eru tilbúnar</p>
-              <form action="/groups/<%= group.id %>/finalize-winner" method="POST">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <input type="hidden" name="songId" value="<%= songsWithVotes[0].id %>">
-                <input type="hidden" name="userId" value="<%= songsWithVotes[0].submittedBy %>">
-                <input type="hidden" name="roundId" value="<%= currentRound.id %>">
-                <button type="submit" class="button success-button">Birta vinningshafa</button>
-              </form>
-            </div>
-          <% } %>
 
           <% if (nextRound) { %>
             <div class="next-round-container">

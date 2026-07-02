@@ -1,164 +1,113 @@
-const { User, Song, Group, Round, UserScore, sequelize } = require('../models');
-const fs = require('fs');
-const path = require('path');
+'use strict';
+
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
+const { config } = require('../config/env');
+const { User, Song, Group, Round } = require('../models');
 
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  cloud_name: config.cloudinary.cloudName,
+  api_key: config.cloudinary.apiKey,
+  api_secret: config.cloudinary.apiSecret,
 });
 
-const storage = multer.memoryStorage();
-
-const upload = multer({ 
-  storage: storage,
+const upload = multer({
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: function(req, file, cb) {
-    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
-      return cb(new Error('Only image files are allowed!'), false);
+  fileFilter(req, file, cb) {
+    if (!/\.(jpg|jpeg|png|gif)$/i.test(file.originalname)) {
+      return cb(new Error('Only image files are allowed.'), false);
     }
     cb(null, true);
-  }
+  },
 }).single('profilePicture');
 
+/** GET /users/:id — public profile. */
+exports.getProfile = async (req, res) => {
+  const userId = req.params.id;
+  const user = await User.findByPk(userId);
+  if (!user) {
+    res.flash('error', 'Notandi fannst ekki');
+    return res.redirect('/');
+  }
+
+  const userSongs = await Song.findAll({
+    where: { submittedBy: userId },
+    include: [
+      { model: Group, as: 'group' },
+      { model: Round, as: 'round' },
+    ],
+    order: [['createdAt', 'DESC']],
+  });
+  const winningSongs = userSongs.filter(
+    (s) => s.round && s.round.winningSongId === s.id
+  );
+  const userGroups = await user.getJoinedGroups({ through: { attributes: ['role'] } });
+
+  res.render('userProfile', {
+    profileUser: user,
+    userSongs,
+    winningSongs,
+    userGroups,
+    isOwnProfile: !!(req.user && req.user.id === Number(userId)),
+    page: 'profile',
+  });
+};
+
+/** GET /users/:id/edit — own profile only. */
+exports.getEditForm = (req, res) => {
+  if (req.user.id !== Number(req.params.id)) {
+    return res.status(403).render('error', { message: 'You can only edit your own profile' });
+  }
+  res.render('editProfile', { user: req.user, page: 'profile' });
+};
+
+/** Middleware: parse the multipart upload and push any image to Cloudinary. */
 exports.uploadProfilePicture = (req, res, next) => {
-  const csrfToken = req.body && req.body._csrf;
-  
-  upload(req, res, async function(err) {
+  upload(req, res, async (err) => {
+    // The edit form submits via XHR and treats any non-200 as failure. Respond
+    // with an error status (not a redirect) so the client surfaces the message
+    // instead of transparently following a 302 to the success path.
     if (err) {
-      console.error('Multer error:', err);
-      req.flash('error', 'Error uploading file: ' + err.message);
-      return res.redirect('/users/' + req.params.id + '/edit');
+      return res.status(400).send(`Error uploading file: ${err.message}`);
     }
-    
-    if (csrfToken) {
-      req.body._csrf = csrfToken;
-    }
-    
     if (req.file) {
       try {
-        const fileBuffer = req.file.buffer;
-        const fileType = req.file.mimetype;
-        const dataURI = `data:${fileType};base64,${fileBuffer.toString('base64')}`;
-        
-        const result = await cloudinary.uploader.upload(dataURI, {
+        const dataUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+        const result = await cloudinary.uploader.upload(dataUri, {
           folder: 'profile_pictures',
           public_id: `user_${req.user.id}_${Date.now()}`,
         });
-        
         req.cloudinaryUrl = result.secure_url;
-        
-      } catch (error) {
-        console.error('Cloudinary upload error:', error);
-        req.flash('error', 'Error uploading to cloud storage');
-        return res.redirect('/users/' + req.params.id + '/edit');
+      } catch (uploadErr) {
+        return res.status(502).send('Error uploading to cloud storage.');
       }
     }
-    
     next();
   });
 };
 
-exports.getUserProfile = async (req, res) => {
-  try {
-    const userId = req.params.id;
-    
-    const user = await User.findByPk(userId, {
-      attributes: ['id', 'username', 'email', 'profilePicture', 'bio', 'createdAt']
-    });
-    
-    if (!user) {
-      return res.status(404).render('error', { message: 'User not found' });
-    }
-    
-    const userGroups = await sequelize.query(`
-      SELECT g.id, g.name, gu.role
-      FROM "Groups" g
-      JOIN "GroupUsers" gu ON g.id = gu."groupId"
-      WHERE gu."userId" = :userId
-    `, {
-      replacements: { userId },
-      type: sequelize.QueryTypes.SELECT
-    });
-    
-    const userSongs = await Song.findAll({
-      where: { submittedBy: userId },
-      include: [
-        { model: Group, as: 'group', attributes: ['id', 'name'] },
-        { 
-          model: Round, 
-          as: 'round',
-          attributes: ['id', 'winnerId', 'winningSongId']
-        }
-      ],
-      order: [['createdAt', 'DESC']]
-    });
-    
-    const userScores = await UserScore.findAll({
-      where: { userId },
-      include: [{ model: Group, attributes: ['id', 'name'] }]
-    });
-    
-    let totalSongs = userSongs.length;
-    let winningSongs = userSongs.filter(song => 
-      song.round && song.round.winningSongId === song.id
-    ).length;
-    
-    const winPercentage = totalSongs > 0 ? 
-      ((winningSongs / totalSongs) * 100).toFixed(1) : 0;
-    
-    res.render('userProfile', {
-      user,
-      userGroups,
-      userSongs,
-      userScores,
-      totalSongs,
-      winningSongs,
-      winPercentage,
-      isOwnProfile: req.user && req.user.id === parseInt(userId)
-    });
-  } catch (error) {
-    console.error('Error getting user profile:', error);
-    res.status(500).render('error', { message: 'Failed to load user profile' });
+/** POST /users/:id/edit — own profile only. */
+exports.updateProfile = async (req, res) => {
+  const userId = req.params.id;
+  if (req.user.id !== Number(userId)) {
+    res.flash('error', 'Þú getur aðeins breytt þínum eigin upplýsingum');
+    return res.redirect(`/users/${req.user.id}`);
   }
-};
 
-exports.updateUserProfile = async (req, res) => {
-  try {
-    const userId = req.params.id;
-    
-    if (req.user.id !== parseInt(userId)) {
-      req.flash('error', 'Þú getur aðeins breytt þínum eigin upplýsingum');
-      return res.redirect('/users/' + req.user.id);
-    }
-    
-    const { bio, imagePosition } = req.body;
-    const updateData = { bio };
-    
-    if (req.cloudinaryUrl) {
-      updateData.profilePicture = req.cloudinaryUrl;
-      
-      if (imagePosition) {
-        try {
-          const positionData = JSON.parse(imagePosition);
-          updateData.profilePicturePosition = JSON.stringify(positionData);
-        } catch (err) {
-          console.error('Error parsing image position data:', err);
-        }
+  const updateData = { bio: req.body.bio };
+  if (req.cloudinaryUrl) {
+    updateData.profilePicture = req.cloudinaryUrl;
+    if (req.body.imagePosition) {
+      try {
+        updateData.profilePicturePosition = JSON.stringify(JSON.parse(req.body.imagePosition));
+      } catch (err) {
+        /* ignore malformed position */
       }
     }
-    
-    await User.update(updateData, {
-      where: { id: userId }
-    });
-    
-    req.flash('success', 'Upplýsingar uppfærðar!');
-    res.redirect('/users/' + userId);
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    req.flash('error', 'Villa kom upp við að uppfæra upplýsingar');
-    res.redirect('/users/' + req.params.id);
   }
+
+  await User.update(updateData, { where: { id: userId } });
+  res.flash('success', 'Upplýsingar uppfærðar!');
+  res.redirect(`/users/${userId}`);
 };

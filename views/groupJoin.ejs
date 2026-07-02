@@ -8,18 +8,6 @@
       Þú þarft lykilorð fyrir aðgang.
     </p>
     
-    <% if (errorMessage) { %>
-      <div class="alert error">
-        <%= errorMessage %>
-      </div>
-    <% } %>
-    
-    <% if (successMessage) { %>
-      <div class="alert success">
-        <%= successMessage %>
-      </div>
-    <% } %>
-    
     <div class="lock-icon">🔒</div>
     
     <form action="/groups/<%= group.id %>/join" method="POST" class="join-form">

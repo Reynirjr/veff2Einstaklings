@@ -6,17 +6,6 @@
     <a href="/groups/<%= group.id %>" class="button">Aftur í Hóp</a>
   </div>
   
-  <% if (successMessage) { %>
-    <div class="alert success">
-      <%= successMessage.replace("Group created successfully! You can now add songs or invite members.", "Hópur stofnaður með góðum árangri! Þú getur nú bætt við lögum eða boðið meðlimum.")
-                        .replace("Group settings updated successfully", "Stillingar hóps uppfærðar með góðum árangri")
-                        .replace("Group settings and future rounds updated successfully", "Stillingar hóps og framtíðarumferðir uppfærðar með góðum árangri")
-                        .replace("Member removed successfully", "Meðlimur fjarlægður með góðum árangri")
-                        .replace("New round created with theme:", "Ný umferð stofnuð með þema:")
-                        .replace("Voting has been finalized!", "Kosningu hefur verið lokið!") %>
-    </div>
-  <% } %>
-
   <!--
     <section class="admin-section">
       <h2>Núverandi leikjar stillingar</h2>

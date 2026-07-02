@@ -77,8 +77,8 @@
       <% } else { %>
         <div class="songs-grid">
           <% userSongs.slice(0, 4).forEach(song => { %>
-            <div class="song-card <%= song.Round && song.Round.winningSongId === song.id ? 'winner' : '' %>">
-              <% if (song.Round && song.Round.winningSongId === song.id) { %>
+            <div class="song-card <%= song.round && song.round.winningSongId === song.id ? 'winner' : '' %>">
+              <% if (song.round && song.round.winningSongId === song.id) { %>
                 <div class="winner-badge">Sigur</div>
               <% } %>
               <h3><%= song.title %></h3>

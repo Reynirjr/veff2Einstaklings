@@ -1,160 +1,35 @@
-const express = require('express');
-const app = express();
-const path = require('path');
-const cookieParser = require('cookie-parser');
-require('dotenv').config();
-const db = require('./models');  
-const { User, Group, Song, Vote, Round } = db;  
-const helmet = require('helmet');
-const roundStatusMiddleware = require('./middleware/roundStatusMiddleware');
-const roundCheckMiddleware = require('./middleware/roundCheckMiddleware');
-const roundStatus = require('./utils/roundStatus');
-const { formatDateWithMilitaryTime, formatTimeOnly } = require('./utils/formatters');
-const csrf = require('csurf');
-const csrfProtection = csrf({
-  cookie: true,
-  value: (req) => {
-    return req.headers['x-csrf-token'] || req.body._csrf;
-  }
-});
-const { body, validationResult } = require('express-validator');
-const jwt = require('jsonwebtoken');
+'use strict';
 
-const fs = require('fs');
-const uploadsDir = path.join(__dirname, 'uploads');
-const profilesDir = path.join(uploadsDir, 'profiles');
+const { config, validate } = require('./config/env');
+const db = require('./models');
+const createApp = require('./app');
+const { startRoundJob } = require('./jobs/roundJob');
 
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
-if (!fs.existsSync(profilesDir)) fs.mkdirSync(profilesDir);
+validate(); // fail fast on missing env
 
-const isDev = process.env.NODE_ENV !== 'production';
+const app = createApp();
 
-if (isDev) {
-  app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false,
-    crossOriginOpenerPolicy: false,
-    crossOriginResourcePolicy: false
-  }));
-} else {
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://www.youtube.com", "https://s.ytimg.com"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com"],
-        imgSrc: ["'self'", "https://i.ytimg.com", "https://res.cloudinary.com", "data:"],
-        connectSrc: ["'self'", "https://api.cloudinary.com"]
-      }
+async function start() {
+  try {
+    await db.sequelize.authenticate();
+    console.log('Database connected.');
+
+    if (config.isProduction) {
+      console.log('Production: using migrations for schema.');
+    } else {
+      await db.sequelize.sync({ alter: true });
+      console.log('Database synced (development).');
     }
-  }));
+
+    startRoundJob();
+
+    app.listen(config.port, () => {
+      console.log(`Server running on port ${config.port}`);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
 }
 
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-app.use(cookieParser());
-app.use(csrfProtection);
-
-app.use((req, res, next) => {
-  res.locals.csrfToken = req.csrfToken();
-  next();
-});
-
-app.use(roundStatusMiddleware);
-app.use(roundCheckMiddleware);
-
-const flashMiddleware = require('./middleware/flashMiddleware');
-app.use(flashMiddleware);
-
-app.use(async (req, res, next) => {
-  const token = req.cookies.token;
-  res.locals.isAuthenticated = !!token;
-  
-  if (token) {
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findByPk(decoded.id);
-      if (user) {
-        req.user = user;
-        res.locals.user = user;
-      }
-    } catch (error) {
-      console.error('Error verifying token:', error);
-    }
-  }
-  
-  next();
-});
-
-app.use((req, res, next) => {
-  res.locals.formatDateWithMilitaryTime = formatDateWithMilitaryTime;
-  res.locals.formatTimeOnly = formatTimeOnly;
-  next();
-});
-
-db.sequelize.authenticate()
-  .then(() => console.log('Database connected successfully.'))
-  .catch(err => console.error('Unable to connect to the database:', err));
-
-if (process.env.NODE_ENV !== 'production') {
-  db.sequelize.sync({ alter: true })
-    .then(() => {
-      console.log('Database synced in development mode');
-      roundStatus.startRoundStatusChecker();
-    })
-    .catch(err => console.error('Error syncing database:', err));
-} else {
-  console.log('Production environment detected - using migrations only');
-  roundStatus.startRoundStatusChecker();
-}
-
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-app.use(express.static(path.join(__dirname, 'public')));
-console.log('DB_NAME is:', process.env.DB_NAME);
-
-
-const indexRoutes = require('./routes/index');
-app.use('/', indexRoutes);
-
-const authRoutes = require('./routes/auth');
-app.use('/', authRoutes);
-
-const groupRoutes = require('./routes/groups');
-app.use('/', groupRoutes);
-
-const songRoutes = require('./routes/songs');
-app.use('/', songRoutes);
-
-const roundRoutes = require('./routes/rounds');
-app.use('/', roundRoutes);
-
-const debugRoutes = require('./routes/debug');
-app.use('/', debugRoutes);
-
-const userRoutes = require('./routes/users');
-app.use('/', userRoutes);
-
-const authMiddleware = require('./middleware/authmiddleware');
-const songController = require('./controllers/songController');
-const router = express.Router();
-
-router.post('/rounds/:roundId/songs', [
-  body('title').trim().isLength({ min: 1, max: 100 }).escape(),
-  body('artist').trim().isLength({ min: 1, max: 100 }).escape(),
-  authMiddleware,
-], (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-  songController.submitSong(req, res);
-});
-
-app.use(router);
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+start();

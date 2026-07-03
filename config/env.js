@@ -71,6 +71,14 @@ const config = {
     apiKey: process.env.CLOUDINARY_API_KEY || null,
     apiSecret: process.env.CLOUDINARY_API_SECRET || null,
   },
+
+  // Web Push (VAPID). Optional — when the keys are missing, push features are
+  // simply disabled (the bell button hides itself and sends become no-ops).
+  vapid: {
+    publicKey: process.env.VAPID_PUBLIC_KEY || null,
+    privateKey: process.env.VAPID_PRIVATE_KEY || null,
+    subject: process.env.VAPID_SUBJECT || 'mailto:benjamin@onnio.is',
+  },
 };
 
 /**

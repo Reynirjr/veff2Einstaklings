@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <% if (typeof csrfToken !== 'undefined' && csrfToken) { %>
+      <meta name="csrf-token" content="<%= csrfToken %>">
+    <% } %>
+    <% if (typeof vapidPublicKey !== 'undefined' && vapidPublicKey) { %>
+      <meta name="vapid-public-key" content="<%= vapidPublicKey %>">
+    <% } %>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/forms.css">
@@ -39,9 +45,15 @@
                 <% } %>
 
                 <li><a href="/groups">Hópar</a></li>
+                <% if (isAuthenticated) { %>
+                  <li><button id="pushToggle" class="push-toggle" type="button" title="Kveikja á tilkynningum">🔕</button></li>
+                <% } %>
             </ul>
         </nav>
     </header>
+    <% if (isAuthenticated) { %>
+      <script src="/js/push.js" defer></script>
+    <% } %>
 
     <% if (typeof flash !== 'undefined' && flash) { %>
       <% if (flash.success) { %><div class="alert success"><%= flash.success %></div><% } %>

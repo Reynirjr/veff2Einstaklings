@@ -109,3 +109,23 @@ footer {
     justify-content: center;
   }
 }
+/* Bjalla fyrir push-tilkynningar í haus */
+.push-toggle {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 1.15rem;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.push-toggle:hover {
+  background-color: var(--off-white);
+  transform: scale(1.1);
+}
+
+.push-toggle:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}

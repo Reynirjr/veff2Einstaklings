@@ -12,5 +12,6 @@ router.use(require('./groups.routes'));
 router.use(require('./rounds.routes'));
 router.use(require('./songs.routes'));
 router.use(require('./users.routes'));
+router.use(require('./push.routes'));
 
 module.exports = router;

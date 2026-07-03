@@ -6,6 +6,7 @@ const { PHASE, computePhase } = require('../domain/phases');
 const { buildRoundWindow, addRecurrence, combineDateWithTime } = require('../domain/time');
 const { computeWinner } = require('../domain/winner');
 const scoreService = require('./scoreService');
+const pushService = require('./pushService');
 
 /**
  * The single owner of the round lifecycle. Everything that used to finalize a
@@ -19,6 +20,11 @@ const scoreService = require('./scoreService');
  */
 async function finalizeRound(round, group = null) {
   if (round.status === PHASE.FINISHED && round.winningSongId) return round;
+
+  // Only the FIRST finalization notifies members. A no-votes round keeps
+  // status=finished with no winningSongId, so it re-enters here on every
+  // reconcile — without this flag it would notify every 60 seconds.
+  const isFirstFinalize = round.status !== PHASE.FINISHED;
 
   const grp = group || (await Group.findByPk(round.groupId));
   if (!grp) return round;
@@ -45,6 +51,15 @@ async function finalizeRound(round, group = null) {
       await scoreService.awardWin(winner.submittedBy, grp.id, { transaction });
     }
   });
+
+  if (isFirstFinalize && winner) {
+    await pushService.notifyGroupMembers(grp.id, {
+      title: `🏆 Niðurstöður komnar — ${grp.name}`,
+      body: `Umferð #${round.roundNumber} er lokið. Sjáðu hver vann!`,
+      url: `/groups/${grp.id}`,
+      tag: `results-${round.id}`,
+    });
+  }
   return round;
 }
 
@@ -118,6 +133,26 @@ async function reconcileGroup(groupOrId, now = new Date()) {
     } else if (round.status !== phase) {
       round.status = phase;
       await round.save();
+
+      // The status cache advances exactly once per transition, so this is the
+      // one safe place to announce it.
+      if (phase === PHASE.INPUT) {
+        await pushService.notifyGroupMembers(group.id, {
+          title: `🎵 Innsendingar opnar — ${group.name}`,
+          body: round.theme
+            ? `Þema umferðar #${round.roundNumber}: ${round.theme}. Sendu inn lag!`
+            : `Umferð #${round.roundNumber} er hafin. Sendu inn lag!`,
+          url: `/groups/${group.id}`,
+          tag: `input-${round.id}`,
+        });
+      } else if (phase === PHASE.VOTING) {
+        await pushService.notifyGroupMembers(group.id, {
+          title: `🗳️ Kosning hafin — ${group.name}`,
+          body: `Hlustaðu á lögin í umferð #${round.roundNumber} og kjóstu!`,
+          url: `/groups/${group.id}/voting`,
+          tag: `voting-${round.id}`,
+        });
+      }
     }
   }
 

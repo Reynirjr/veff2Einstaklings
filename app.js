@@ -43,6 +43,8 @@ function createApp() {
   // Presentation helpers available to every template.
   app.use((req, res, next) => {
     Object.assign(res.locals, viewHelpers);
+    // Public VAPID key for the push-subscribe button (empty = push disabled).
+    res.locals.vapidPublicKey = config.vapid.publicKey || '';
     next();
   });
 

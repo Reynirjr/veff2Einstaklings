@@ -1,6 +1,6 @@
 'use strict';
 
-const { Group } = require('../models');
+const { Group, Round } = require('../models');
 const { pickRandomTheme } = require('../domain/themes');
 
 /**
@@ -29,6 +29,12 @@ async function setNextTheme(round, userId, choice) {
   if (!theme) throw new ThemeError('Please provide a theme.');
 
   await Group.update({ theme }, { where: { id: round.groupId } });
+  // The next round is usually created (with the old theme copied onto it)
+  // before the winner gets to choose — propagate the choice onto it too.
+  await Round.update(
+    { theme },
+    { where: { groupId: round.groupId, roundNumber: round.roundNumber + 1 } }
+  );
   round.nextThemeSelected = true;
   await round.save();
 

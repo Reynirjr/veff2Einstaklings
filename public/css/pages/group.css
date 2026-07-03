@@ -492,3 +492,81 @@
   background-color: #c92f3c;
   color: var(--white);
 }
+
+/* ---------- Niðurstöðu-popup ---------- */
+
+.results-modal-content {
+  text-align: center;
+}
+
+.results-step.hidden {
+  display: none;
+}
+
+.results-icon {
+  font-size: 3.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.reveal-button {
+  display: inline-block;
+  background-color: var(--primary);
+  color: var(--white);
+  font-size: 1.15rem;
+  font-weight: 700;
+  padding: 0.85rem 2rem;
+  margin-top: 0.75rem;
+  border-radius: 8px;
+  animation: banner-pulse 2s infinite;
+}
+
+.reveal-button:hover {
+  background-color: var(--primary-light);
+  color: var(--white);
+  transform: scale(1.04);
+}
+
+.results-step.revealed {
+  animation: results-reveal 0.5s ease-out;
+}
+
+@keyframes results-reveal {
+  0%   { opacity: 0; transform: scale(0.85); }
+  60%  { transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.winner-trophy {
+  animation: trophy-bounce 0.9s ease;
+}
+
+@keyframes trophy-bounce {
+  0%   { transform: translateY(-40px); opacity: 0; }
+  50%  { transform: translateY(8px); opacity: 1; }
+  70%  { transform: translateY(-6px); }
+  100% { transform: translateY(0); }
+}
+
+.winner-reveal {
+  background-color: var(--off-white);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.winner-reveal-trophy {
+  font-size: 2.5rem;
+}
+
+.winner-reveal-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 0.25rem;
+}
+
+.winner-reveal-song {
+  margin-top: 0.35rem;
+  font-size: 1rem;
+  opacity: 0.85;
+}

@@ -307,38 +307,77 @@
     </script>
   <% } %>
 
-  <% if (currentRound && currentRound.winnerId && currentRound.winnerId == userId && !currentRound.nextThemeSelected) { %>
-    <div id="winnerModal" class="modal">
-      <div class="modal-content">
+  <%# --- Niðurstöðu-popup: birtist einu sinni eftir að kosningu lýkur --- %>
+  <% if (isMember && lastFinishedRound && lastFinishedRound.winnerId) { %>
+    <% const iAmWinner = lastFinishedRound.winnerId === userId;
+       const winSong = lastFinishedRound.winningSong;
+       const themePending = iAmWinner && !lastFinishedRound.nextThemeSelected; %>
+    <div id="resultsModal" class="modal"
+         data-round-id="<%= lastFinishedRound.id %>"
+         data-theme-pending="<%= themePending ? '1' : '0' %>">
+      <div class="modal-content results-modal-content">
         <span class="close">&times;</span>
-        <div class="winner-trophy">🏆</div>
-        <h2>Til Hamingju!</h2>
-        <p>Lagið þitt "<strong><%= winningRound.winningSong ? winningRound.winningSong.title : 'Winning Song' %></strong>" vann umferðina!</p>
-        
-        <div class="theme-selector">
-          <h3>Veldu þema fyrir næstu umferð</h3>
-          <form action="/groups/<%= group.id %>/theme" method="POST">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <input type="hidden" name="roundId" value="<%= winningRound.id %>">
-            
-            <div class="theme-options">
-            <div>
-              <input type="radio" name="themeOption" id="customTheme" value="custom"> 
-              <label for="customTheme">Velja þema</label>
-              <input type="text" id="theme" name="theme" placeholder="t.d. 'Diskó' eða 'Hip hop'" class="theme-input">
-            </div>
-  
-          <div>
-        <input type="radio" name="themeOption" id="randomTheme" value="random" checked> 
-      <label for="randomTheme">Koma mér á óvart!</label>
-    </div>
-  </div>
-            
-            <button type="submit" class="button">Velja þema!</button>
-          </form>
+
+        <%# Skref 1: spennan byggð upp %>
+        <div class="results-step" id="resultsStep1">
+          <div class="results-icon">🥁</div>
+          <h2>Kosningu er lokið!</h2>
+          <p>Umferð #<%= lastFinishedRound.roundNumber %><%= lastFinishedRound.theme ? ` — þema: ${lastFinishedRound.theme}` : '' %></p>
+          <p>Niðurstöðurnar eru komnar…</p>
+          <button type="button" id="revealResults" class="button reveal-button">Sjá niðurstöður 🎉</button>
         </div>
-        
-        <p class="small">Sem sigurvegari færð þú að velja þemað fyrir næstu umferð</p>
+
+        <%# Skref 2: niðurstaðan %>
+        <div class="results-step hidden" id="resultsStep2">
+          <% if (iAmWinner) { %>
+            <div class="results-icon winner-trophy">🏆</div>
+            <h2>Til hamingju — þú vannst!</h2>
+            <p>Lagið þitt "<strong><%= winSong ? winSong.title : 'Sigurlagið' %></strong>" vann umferðina!</p>
+
+            <% if (themePending) { %>
+              <div class="theme-selector">
+                <h3>Veldu þema fyrir næstu umferð</h3>
+                <form action="/groups/<%= group.id %>/theme" method="POST">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <input type="hidden" name="roundId" value="<%= lastFinishedRound.id %>">
+
+                  <div class="theme-options">
+                    <div>
+                      <input type="radio" name="themeOption" id="customTheme" value="custom">
+                      <label for="customTheme">Velja þema</label>
+                      <input type="text" id="theme" name="theme" placeholder="t.d. 'Diskó' eða 'Hip hop'" class="theme-input">
+                    </div>
+                    <div>
+                      <input type="radio" name="themeOption" id="randomTheme" value="random" checked>
+                      <label for="randomTheme">Koma mér á óvart! 🎲</label>
+                    </div>
+                  </div>
+
+                  <button type="submit" class="button">Velja þema!</button>
+                </form>
+                <p class="small">Sem sigurvegari velur þú þemað fyrir næstu umferð</p>
+              </div>
+            <% } else { %>
+              <p class="small">Þemað fyrir næstu umferð er komið: <strong><%= group.theme %></strong></p>
+            <% } %>
+          <% } else { %>
+            <div class="results-icon">🎶</div>
+            <h2>Betur gengur næst!</h2>
+            <p>Sigurvegari umferðarinnar:</p>
+            <div class="winner-reveal">
+              <div class="winner-reveal-trophy">🏆</div>
+              <div class="winner-reveal-name">
+                <%= lastFinishedRound.winner ? lastFinishedRound.winner.username : 'Óþekktur' %>
+              </div>
+              <% if (winSong) { %>
+                <div class="winner-reveal-song">
+                  „<%= winSong.title %>" — <%= winSong.artist %>
+                </div>
+              <% } %>
+            </div>
+            <button type="button" class="button" id="resultsCloseBtn">Loka</button>
+          <% } %>
+        </div>
       </div>
     </div>
   <% } %>
@@ -346,42 +385,53 @@
  
 
   <script>
-    window.nextRoundInfo = (typeof nextRound !== 'undefined' && nextRound !== null) ? 
+    window.nextRoundInfo = (typeof nextRound !== 'undefined' && nextRound !== null) ?
     {
       inputOpen: '<%= nextRound ? nextRound.inputOpen : "" %>',
       roundNumber: '<%= nextRound ? nextRound.roundNumber : "" %>'
     }
     : null;
-    
-    window.isWinner = "<%= (typeof isWinner !== 'undefined' && isWinner) ? 'true' : 'false' %>" === "true";
-    window.nextThemeSelected = "<%= (typeof nextThemeSelected !== 'undefined' && nextThemeSelected) ? 'true' : 'false' %>" === "true";
-    window.hasWinningRound = "<%= (typeof winningRound !== 'undefined' && winningRound) ? 'true' : 'false' %>" === "true";
 
-    document.addEventListener('DOMContentLoaded', function() {
-      
-      const showWinnerModal = window.isWinner && !window.nextThemeSelected && window.hasWinningRound;
-            
-      const modals = document.querySelectorAll('.modal');
-      
-      if (showWinnerModal && modals.length > 0) {
-        const winnerModal = document.getElementById('winnerModal');
-        if (winnerModal) {
-          winnerModal.style.display = 'block';
-          
-          const closeBtn = winnerModal.querySelector('.close');
-          if (closeBtn) {
-            closeBtn.onclick = function() {
-              winnerModal.style.display = 'none';
-            };
-          }
-          
-          window.onclick = function(event) {
-            if (event.target === winnerModal) {
-              winnerModal.style.display = 'none';
-            };
-          }
-        }
+    // Niðurstöðu-popup: birtist einu sinni á umferð (localStorage). Sigurvegari
+    // sem á eftir að velja þema fær það alltaf upp þar til þemað er valið.
+    document.addEventListener('DOMContentLoaded', function () {
+      const modal = document.getElementById('resultsModal');
+      if (!modal) return;
+
+      const seenKey = 'resultsSeen-' + modal.dataset.roundId;
+      const themePending = modal.dataset.themePending === '1';
+      const seen = !!localStorage.getItem(seenKey);
+
+      if (seen && !themePending) return;
+
+      modal.style.display = 'block';
+
+      const step1 = document.getElementById('resultsStep1');
+      const step2 = document.getElementById('resultsStep2');
+
+      function reveal() {
+        localStorage.setItem(seenKey, '1');
+        step1.classList.add('hidden');
+        step2.classList.remove('hidden');
+        step2.classList.add('revealed');
       }
+
+      // Búið að sjá niðurstöðuna áður en þema óvalið → beint í þemavalið.
+      if (seen && themePending) reveal();
+
+      const revealBtn = document.getElementById('revealResults');
+      if (revealBtn) revealBtn.onclick = reveal;
+
+      function dismiss() {
+        localStorage.setItem(seenKey, '1');
+        modal.style.display = 'none';
+      }
+      modal.querySelector('.close').onclick = dismiss;
+      const closeBtn = document.getElementById('resultsCloseBtn');
+      if (closeBtn) closeBtn.onclick = dismiss;
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) dismiss();
+      });
     });
   </script>
 

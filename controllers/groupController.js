@@ -101,6 +101,12 @@ exports.show = async (req, res) => {
   const currentRound = rounds[0] || null;
   const phase = currentRound ? computePhase(currentRound) : null;
 
+  // The newest round whose results are in. Once a round finishes, reconcile
+  // spawns the next one immediately, so `currentRound` is usually the NEW
+  // round — the results popup must look at the last finished one instead.
+  const lastFinishedRound =
+    rounds.find((r) => computePhase(r) === PHASE.FINISHED) || null;
+
   let userSubmittedSong = null;
   let songsWithVotes = [];
   let hasVotedInRound = false;
@@ -137,7 +143,7 @@ exports.show = async (req, res) => {
     });
   }
 
-  const isWinner = !!(currentRound && currentRound.winnerId === userId);
+  const isWinner = !!(lastFinishedRound && lastFinishedRound.winnerId === userId);
 
   res.render('group', {
     group,
@@ -152,8 +158,9 @@ exports.show = async (req, res) => {
     leaderboard,
     nextRound,
     isWinner,
-    winningRound: isWinner ? currentRound : null,
-    nextThemeSelected: currentRound ? !!currentRound.nextThemeSelected : false,
+    lastFinishedRound,
+    winningRound: isWinner ? lastFinishedRound : null,
+    nextThemeSelected: lastFinishedRound ? !!lastFinishedRound.nextThemeSelected : false,
     page: 'group',
   });
 };

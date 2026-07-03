@@ -11,6 +11,9 @@
     },
     "author": "Benjamín Reynir Jóhannsson",
     "license": "MIT",
+    "engines": {
+        "node": ">=20"
+    },
     "dependencies": {
         "bcrypt": "^6.0.0",
         "cloudinary": "^2.6.0",

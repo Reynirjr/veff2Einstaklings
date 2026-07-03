@@ -14,11 +14,11 @@ async function start() {
     await db.sequelize.authenticate();
     console.log('Database connected.');
 
-    if (config.isProduction) {
+    if (config.isProduction && !config.dbSync) {
       console.log('Production: using migrations for schema.');
     } else {
       await db.sequelize.sync({ alter: true });
-      console.log('Database synced (development).');
+      console.log(`Database synced (${config.nodeEnv}${config.dbSync ? ', DB_SYNC' : ''}).`);
     }
 
     startRoundJob();

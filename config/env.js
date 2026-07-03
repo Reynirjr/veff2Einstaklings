@@ -31,6 +31,19 @@ function read(name, fallback) {
   return value;
 }
 
+// When a full DATABASE_URL is supplied (Railway / Heroku style) the individual
+// DB_* variables are not needed, so they must not be treated as "required".
+const hasDbUrl = !!process.env.DATABASE_URL;
+const dbFallback = (testValue) =>
+  isTest ? testValue : hasDbUrl ? null : undefined;
+
+// Schema bootstrap: normally production runs migrations, but setting
+// DB_SYNC=true (e.g. for a first deploy before migrations are wired up) makes
+// the app create/alter the schema from the models on boot.
+const dbSync = ['1', 'true', 'alter', 'yes'].includes(
+  String(process.env.DB_SYNC || '').toLowerCase()
+);
+
 const config = {
   nodeEnv,
   isProduction,
@@ -41,14 +54,16 @@ const config = {
   jwtSecret: read('JWT_SECRET', isTest ? 'test-secret' : undefined),
   jwtExpiresIn: read('JWT_EXPIRES_IN', '1h'),
 
+  dbSync,
+
   db: {
     // A full connection string (Railway / Heroku style) takes precedence when present.
     url: process.env.DATABASE_URL || null,
-    host: read('DB_HOST', isTest ? 'localhost' : undefined),
+    host: read('DB_HOST', dbFallback('localhost')),
     port: Number(read('DB_PORT', 5432)),
-    name: read('DB_NAME', isTest ? 'tonaleikarnir_test' : undefined),
-    user: read('DB_USER', isTest ? 'postgres' : undefined),
-    password: read('DB_PASSWORD', isTest ? '' : undefined),
+    name: read('DB_NAME', dbFallback('tonaleikarnir_test')),
+    user: read('DB_USER', dbFallback('postgres')),
+    password: read('DB_PASSWORD', dbFallback('')),
   },
 
   cloudinary: {

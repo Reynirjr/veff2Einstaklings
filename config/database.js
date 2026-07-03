@@ -28,9 +28,19 @@ const sslOptions = {
   ssl: { require: true, rejectUnauthorized: false },
 };
 
+// A connection string may target a plaintext internal network (Railway's
+// *.railway.internal) that rejects SSL, or explicitly disable it. Only apply
+// SSL when the URL isn't one of those.
+function urlWantsSsl(url) {
+  if (/sslmode=disable/i.test(url)) return false;
+  if (url.includes('.railway.internal')) return false;
+  return true;
+}
+
 let sequelize;
 if (config.db.url) {
-  sequelize = new Sequelize(config.db.url, { ...common, dialectOptions: sslOptions });
+  const urlOpts = urlWantsSsl(config.db.url) ? { dialectOptions: sslOptions } : {};
+  sequelize = new Sequelize(config.db.url, { ...common, ...urlOpts });
 } else {
   sequelize = new Sequelize(config.db.name, config.db.user, config.db.password, {
     ...common,

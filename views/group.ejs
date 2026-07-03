@@ -343,12 +343,13 @@
 
                   <div class="theme-options">
                     <div>
-                      <input type="radio" name="themeOption" id="customTheme" value="custom">
+                      <input type="radio" name="themeOption" id="customTheme" value="custom" checked>
                       <label for="customTheme">Velja þema</label>
-                      <input type="text" id="theme" name="theme" placeholder="t.d. 'Diskó' eða 'Hip hop'" class="theme-input">
+                      <input type="text" id="theme" name="theme" placeholder="t.d. 'Diskó' eða 'Hip hop'" class="theme-input"
+                             onfocus="document.getElementById('customTheme').checked = true">
                     </div>
                     <div>
-                      <input type="radio" name="themeOption" id="randomTheme" value="random" checked>
+                      <input type="radio" name="themeOption" id="randomTheme" value="random">
                       <label for="randomTheme">Koma mér á óvart! 🎲</label>
                     </div>
                   </div>

@@ -103,8 +103,12 @@ exports.show = async (req, res) => {
 
   let userSubmittedSong = null;
   let songsWithVotes = [];
+  let hasVotedInRound = false;
   if (currentRound) {
     userSubmittedSong = (currentRound.songs || []).find((s) => s.submittedBy === userId);
+    hasVotedInRound = (currentRound.songs || []).some((s) =>
+      (s.votes || []).some((v) => v.userId === userId)
+    );
     if (phase === PHASE.VOTING || phase === PHASE.FINISHED) {
       // Order by the round's actual voting method (points for top_3, average for
       // rating, count for single_vote) so the display matches the real winner.
@@ -143,6 +147,7 @@ exports.show = async (req, res) => {
     currentRound,
     phase,
     userSubmittedSong,
+    hasVotedInRound,
     songsWithVotes,
     leaderboard,
     nextRound,

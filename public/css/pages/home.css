@@ -1,0 +1,180 @@
+/* ---------- Forsíða: hero (útskráð/ný) ---------- */
+
+.hero {
+  text-align: center;
+  background-color: var(--white);
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  max-width: 640px;
+  margin: 3rem auto;
+  box-shadow: 0 4px 20px var(--shadow);
+}
+
+.hero-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.hero-button {
+  font-size: 1.1rem;
+  padding: 0.85rem 2rem;
+}
+
+/* ---------- Forsíða: hópayfirlit ---------- */
+
+.dashboard-title {
+  text-align: center;
+  margin: 1rem 0 2rem;
+}
+
+.group-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.group-card {
+  background-color: var(--white);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 2px 10px var(--shadow);
+  border-left: 6px solid #ccc;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.group-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px var(--shadow);
+}
+
+/* Fasalitir á vinstri rönd */
+.group-card.phase-voting   { border-left-color: var(--error); }
+.group-card.phase-input    { border-left-color: var(--success); }
+.group-card.phase-pending  { border-left-color: var(--secondary); }
+.group-card.phase-finished { border-left-color: var(--primary); }
+
+/* Kort sem bíða eftir notandanum fá meira vægi */
+.group-card.needs-action {
+  box-shadow: 0 4px 18px rgba(230, 57, 70, 0.25);
+}
+
+.group-card.phase-voting.needs-action {
+  grid-column: 1 / -1; /* kosning í gangi og ókosið → kort í fullri breidd */
+  background: linear-gradient(135deg, #fff5f5 0%, var(--white) 45%);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.card-group-name {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.phase-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.phase-badge.voting   { background-color: #ffe3e3; color: var(--error); }
+.phase-badge.input    { background-color: #e2f7ed; color: #1b7a4b; }
+.phase-badge.pending  { background-color: #fff3d6; color: #8a6d1a; }
+.phase-badge.finished { background-color: #e3ecf5; color: var(--primary); }
+.phase-badge.none     { background-color: var(--off-white); color: #888; }
+
+.card-theme {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 0.95rem;
+}
+
+.card-countdown {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.card-countdown .countdown-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--primary);
+}
+
+.card-countdown.urgent .countdown-value {
+  color: var(--error);
+}
+
+.card-status {
+  min-height: 1.4rem;
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.status-done { color: #1b7a4b; font-weight: 600; }
+.status-todo { color: var(--error); font-weight: 700; }
+
+.card-actions {
+  margin-top: 0.5rem;
+}
+
+.card-cta {
+  display: inline-block;
+  text-align: center;
+}
+
+.voting-cta {
+  background-color: var(--error);
+  color: var(--white);
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 0.75rem 1.75rem;
+  animation: pulse-cta 2s infinite;
+}
+
+.voting-cta:hover {
+  background-color: #c92f3c;
+  color: var(--white);
+}
+
+.input-cta {
+  background-color: var(--success);
+  color: var(--white);
+  font-weight: 600;
+}
+
+@keyframes pulse-cta {
+  0%   { box-shadow: 0 0 0 0 rgba(230, 57, 70, 0.45); }
+  70%  { box-shadow: 0 0 0 12px rgba(230, 57, 70, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(230, 57, 70, 0); }
+}
+
+.dashboard-footer {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+@media (max-width: 600px) {
+  .group-cards {
+    grid-template-columns: 1fr;
+  }
+}

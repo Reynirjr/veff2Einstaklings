@@ -1,8 +1,145 @@
 <%- include('partials/header') %>
 
-<main>
-    <h1>Velkomin/nn á Tónaleikana!</h1>
-        <p>Hér á eftir munu þið keppast um að finna besta lagið.</p>
+<main class="home-page">
+  <% if (cards === null) { %>
+    <%# --- Logged out: welcome hero --- %>
+    <div class="hero">
+      <div class="hero-icon">🎵</div>
+      <h1>Velkomin/nn á Tónaleikana!</h1>
+      <p>Sendu inn lag sem passar við þema, kjóstu besta lagið — sigurvegarinn velur næsta þema.</p>
+      <div class="hero-actions">
+        <a href="/signup" class="button hero-button">Búa til aðgang</a>
+        <a href="/login" class="button hero-button secondary">Innskráning</a>
+      </div>
+    </div>
+  <% } else if (cards.length === 0) { %>
+    <%# --- Logged in, no groups yet --- %>
+    <div class="hero">
+      <div class="hero-icon">🎧</div>
+      <h1>Þú ert ekki í neinum hóp ennþá</h1>
+      <p>Gakktu í hóp eða stofnaðu þinn eigin til að byrja að keppa!</p>
+      <div class="hero-actions">
+        <a href="/groups" class="button hero-button">Skoða hópa</a>
+      </div>
+    </div>
+  <% } else { %>
+    <%# --- Logged in: dashboard of the user's groups --- %>
+    <h1 class="dashboard-title">Hóparnir þínir</h1>
+
+    <div class="group-cards">
+      <% cards.forEach((card) => { %>
+        <div class="group-card phase-<%= card.phase || 'none' %> <%= card.needsAction ? 'needs-action' : '' %>">
+          <div class="card-top">
+            <h2 class="card-group-name">
+              <a href="/groups/<%= card.group.id %>"><%= card.group.name %></a>
+            </h2>
+            <% if (card.phase === 'voting') { %>
+              <span class="phase-badge voting">🗳️ Kosning í gangi</span>
+            <% } else if (card.phase === 'input') { %>
+              <span class="phase-badge input">🎵 Opið fyrir innsendingar</span>
+            <% } else if (card.phase === 'pending') { %>
+              <span class="phase-badge pending">⏳ Umferð að hefjast</span>
+            <% } else if (card.phase === 'finished') { %>
+              <span class="phase-badge finished">🏆 Umferð lokið</span>
+            <% } else { %>
+              <span class="phase-badge none">Engin umferð</span>
+            <% } %>
+          </div>
+
+          <% if (card.round && card.round.theme) { %>
+            <p class="card-theme">Þema: <strong><%= card.round.theme %></strong></p>
+          <% } %>
+
+          <% if (card.deadline) { %>
+            <div class="card-countdown" data-deadline="<%= new Date(card.deadline).toISOString() %>">
+              <span class="countdown-label">
+                <% if (card.phase === 'pending') { %>Innsendingar opna eftir
+                <% } else if (card.phase === 'input') { %>Innsendingum lýkur eftir
+                <% } else { %>Kosningu lýkur eftir<% } %>
+              </span>
+              <span class="countdown-value">…</span>
+            </div>
+          <% } %>
+
+          <div class="card-status">
+            <% if (card.phase === 'voting') { %>
+              <% if (card.hasVoted) { %>
+                <span class="status-done">✓ Þú hefur kosið</span>
+              <% } else { %>
+                <span class="status-todo">Þú átt eftir að kjósa!</span>
+              <% } %>
+            <% } else if (card.phase === 'input') { %>
+              <% if (card.hasSubmitted) { %>
+                <span class="status-done">✓ Lagið þitt er komið inn</span>
+              <% } else { %>
+                <span class="status-todo">Þú átt eftir að senda inn lag!</span>
+              <% } %>
+            <% } %>
+          </div>
+
+          <div class="card-actions">
+            <% if (card.phase === 'voting') { %>
+              <a href="/groups/<%= card.group.id %>/voting" class="button card-cta voting-cta">
+                <%= card.hasVoted ? 'Skoða / breyta atkvæði' : 'Kjósa núna!' %>
+              </a>
+            <% } else if (card.phase === 'input' && !card.hasSubmitted) { %>
+              <a href="/groups/<%= card.group.id %>" class="button card-cta input-cta">Senda inn lag</a>
+            <% } else { %>
+              <a href="/groups/<%= card.group.id %>" class="button card-cta">Opna hóp</a>
+            <% } %>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+
+    <div class="dashboard-footer">
+      <a href="/groups" class="button secondary">Allir hópar</a>
+    </div>
+
+    <script>
+      // Live countdowns on every card that has a deadline.
+      document.addEventListener('DOMContentLoaded', function () {
+        const containers = document.querySelectorAll('.card-countdown[data-deadline]');
+
+        function fmt(ms) {
+          if (ms <= 0) return null;
+          const s = Math.floor(ms / 1000);
+          const d = Math.floor(s / 86400);
+          const h = Math.floor((s % 86400) / 3600);
+          const m = Math.floor((s % 3600) / 60);
+          const sec = s % 60;
+          if (d > 0) return d + 'd ' + h + 'klst';
+          if (h > 0) return h + 'klst ' + m + 'mín';
+          if (m > 0) return m + 'mín ' + sec + 's';
+          return sec + 's';
+        }
+
+        function tick() {
+          let anyExpired = false;
+          containers.forEach(function (el) {
+            const target = new Date(el.dataset.deadline).getTime();
+            const remaining = target - Date.now();
+            const out = fmt(remaining);
+            const value = el.querySelector('.countdown-value');
+            if (out === null) {
+              value.textContent = 'Núna!';
+              anyExpired = true;
+            } else {
+              value.textContent = out;
+              if (remaining < 60 * 60 * 1000) el.classList.add('urgent');
+            }
+          });
+          // A phase just flipped — refresh so the cards re-sort with fresh state.
+          if (anyExpired) setTimeout(function () { window.location.reload(); }, 5000);
+        }
+
+        if (containers.length > 0) {
+          tick();
+          setInterval(tick, 1000);
+        }
+      });
+    </script>
+  <% } %>
 </main>
 
 <%- include('partials/footer') %>

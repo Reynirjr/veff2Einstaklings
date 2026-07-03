@@ -8,7 +8,9 @@
     <link rel="stylesheet" href="/css/forms.css">
     
     <% if (typeof page !== 'undefined') { %>
-      <% if (page === 'group' || page === 'groupAdmin') { %>
+      <% if (page === 'home') { %>
+        <link rel="stylesheet" href="/css/pages/home.css">
+      <% } else if (page === 'group' || page === 'groupAdmin') { %>
         <link rel="stylesheet" href="/css/pages/group.css">
       <% } else if (page === 'profile') { %>
         <link rel="stylesheet" href="/css/pages/user-profile.css">

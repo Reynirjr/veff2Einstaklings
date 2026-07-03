@@ -151,6 +151,7 @@ exports.getSongDetail = async (req, res) => {
   res.render('song', {
     song,
     group,
+    round,
     youtubeVideoId: extractYouTubeId(song.youtubeUrl),
     userId,
     canVote,
@@ -159,7 +160,10 @@ exports.getSongDetail = async (req, res) => {
     availableRanks,
     prevSong: idx > 0 ? roundSongs[idx - 1] : null,
     nextSong: idx >= 0 && idx < roundSongs.length - 1 ? roundSongs[idx + 1] : null,
+    songIndex: idx >= 0 ? idx + 1 : null,
+    songCount: roundSongs.length,
     isVotingPhase: phase === PHASE.VOTING,
+    page: 'song',
   });
 };
 

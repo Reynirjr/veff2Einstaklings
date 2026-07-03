@@ -1,11 +1,12 @@
 'use strict';
 
 const express = require('express');
+const asyncHandler = require('../lib/asyncHandler');
 const homeController = require('../controllers/homeController');
 
 const router = express.Router();
 
-router.get('/', homeController.home);
+router.get('/', asyncHandler(homeController.home));
 router.use(require('./auth.routes'));
 router.use(require('./groups.routes'));
 router.use(require('./rounds.routes'));

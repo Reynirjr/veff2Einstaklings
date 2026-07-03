@@ -1,104 +1,162 @@
 <%- include('partials/header') %>
 
 <main class="song-detail-page">
+  <% if (songIndex && songCount) { %>
+    <div class="song-progress">
+      <span class="progress-text">Lag <%= songIndex %> af <%= songCount %></span>
+      <div class="progress-dots">
+        <% for (let i = 1; i <= songCount; i++) { %>
+          <span class="dot <%= i === songIndex ? 'active' : '' %>"></span>
+        <% } %>
+      </div>
+    </div>
+  <% } %>
+
   <div class="song-header">
+    <% if (group && group.theme) { %>
+      <div class="song-theme-badge">Þema: <%= group.theme %></div>
+    <% } %>
     <h1><%= song.title %></h1>
-    <h2>Eftir <%= song.artist %></h2>
+    <h2><%= song.artist %></h2>
   </div>
-  
+
   <div class="video-container">
-    <iframe width="560" height="315" src="https://www.youtube.com/embed/<%= youtubeVideoId %>?si=aI72mvCtodA75s7C" 
-      title="YouTube video player" frameborder="0" 
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/<%= youtubeVideoId %>"
+      title="YouTube video player" frameborder="0"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
       referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
     </iframe>
   </div>
-  
+
+  <% if (phase === 'voting' && round && round.votingClose) { %>
+    <div class="voting-deadline" data-deadline="<%= new Date(round.votingClose).toISOString() %>">
+      ⏱️ Kosningu lýkur eftir <span class="deadline-value">…</span>
+    </div>
+  <% } %>
+
   <% if (canVote) { %>
     <div class="voting-section">
       <% if (!group || !group.votingMethod) { %>
-        <p>Voting information not available</p>
+        <p>Upplýsingar um kosningu ekki tiltækar</p>
       <% } else if (group.votingMethod === 'single_vote') { %>
         <form action="/songs/<%= song.id %>/vote" method="POST">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <input type="hidden" name="voteType" value="single">
           <input type="hidden" name="returnTo" value="/groups/<%= song.groupId %>/voting">
+          <% if (userVote) { %>
+            <div class="vote-state voted-state">✓ Þú kaust þetta lag</div>
+          <% } %>
           <button type="submit" class="vote-button <%= userVote ? 'voted' : '' %>">
-            <%= userVote ? 'Breyta atkvæði í þetta lag' : 'Kjósa þetta lag' %>
+            <%= userVote ? 'Þú kaust þetta — kjósa aftur' : '🗳️ Kjósa þetta lag' %>
           </button>
         </form>
       <% } else if (group.votingMethod === 'rating') { %>
         <form action="/songs/<%= song.id %>/vote" method="POST" class="rating-form">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <h3>Gefðu þessu lagi einkunn (1-10):</h3>
+          <h3>Gefðu þessu lagi einkunn</h3>
+          <% if (userVote) { %>
+            <div class="vote-state voted-state">✓ Einkunnin þín: <%= userVote %>/10 — þú getur breytt henni</div>
+          <% } %>
           <div class="rating-stars">
             <% for (let i = 1; i <= 10; i++) { %>
-              <input type="radio" name="rating" id="rating-<%= i %>" value="<%= i %>" 
-                <%= userVote && (typeof userVote === 'object' ? userVote.value === i : userVote === i) ? 'checked' : '' %>>
+              <input type="radio" name="rating" id="rating-<%= i %>" value="<%= i %>" required
+                <%= userVote === i ? 'checked' : '' %>>
               <label for="rating-<%= i %>"><%= i %></label>
             <% } %>
           </div>
           <input type="hidden" name="voteType" value="rating">
           <input type="hidden" name="returnTo" value="/groups/<%= song.groupId %>/voting">
-          <button type="submit" class="submit-rating">Senda einkunn</button>
+          <button type="submit" class="submit-rating vote-button">Senda einkunn</button>
         </form>
       <% } else if (group.votingMethod === 'top_3') { %>
         <form action="/songs/<%= song.id %>/vote" method="POST" class="rank-form">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <h3>Raðaðu þessu lagi í þinn Top 3:</h3>
-          
-          <div class="rank-selection">
-            <select name="rank" required>
-              <option value="" disabled <%= !userVote ? 'selected' : '' %>>Veldu röð...</option>
-              <option value="1" <%= userVote === 1 ? 'selected' : '' %>>1. sæti (3 stig)</option>
-              <option value="2" <%= userVote === 2 ? 'selected' : '' %>>2. sæti (2 stig)</option>
-              <option value="3" <%= userVote === 3 ? 'selected' : '' %>>3. sæti (1 stig)</option>
-            </select>
-            
-            <% if (userVote) { %>
-              <div class="current-rank">
-                Núverandi staða er #<%= userVote %> valið þitt
-              </div>
-            <% } %>
+          <h3>Raðaðu þessu lagi í þinn Topp 3</h3>
+          <% if (userVote) { %>
+            <div class="vote-state voted-state">✓ Þetta lag er í <%= userVote %>. sæti hjá þér</div>
+          <% } %>
+
+          <div class="rank-podium">
+            <% [
+              { rank: 1, label: '1. sæti', points: '3 stig', cls: 'gold' },
+              { rank: 2, label: '2. sæti', points: '2 stig', cls: 'silver' },
+              { rank: 3, label: '3. sæti', points: '1 stig', cls: 'bronze' }
+            ].forEach((opt) => {
+              const takenByOther = !availableRanks.includes(opt.rank) && userVote !== opt.rank; %>
+              <input type="radio" name="rank" id="rank-<%= opt.rank %>" value="<%= opt.rank %>" required
+                <%= userVote === opt.rank ? 'checked' : '' %>>
+              <label for="rank-<%= opt.rank %>" class="podium-option <%= opt.cls %> <%= takenByOther ? 'taken' : '' %>">
+                <span class="podium-rank"><%= opt.rank %></span>
+                <span class="podium-label"><%= opt.label %></span>
+                <span class="podium-points"><%= opt.points %></span>
+                <% if (takenByOther) { %><span class="podium-taken">Notað á annað lag</span><% } %>
+              </label>
+            <% }); %>
           </div>
-          
-          <div class="rank-info">
-            <p>Valið þitt #1 fær 3 stig, #2 fær 2 stig og #3 fær 1 stig.</p>
-            <% if (availableRanks && availableRanks.length < 3) { %>
-              <p class="available-ranks">
-                <strong>Athugaðu:</strong> Þú hefur þegar notað raðir: 
-                <%= [1,2,3].filter(r => !availableRanks.includes(r)).join(', ') %>
-              </p>
-            <% } %>
-          </div>
-          
+
+          <p class="rank-info">
+            Ef þú velur sæti sem annað lag hefur nú þegar færist það sæti yfir á þetta lag.
+          </p>
+
           <input type="hidden" name="voteType" value="top_3">
           <input type="hidden" name="returnTo" value="/groups/<%= song.groupId %>/voting">
-          <button type="submit" class="submit-ranking">Vista röðun</button>
+          <button type="submit" class="submit-ranking vote-button">Vista röðun</button>
         </form>
       <% } %>
     </div>
   <% } else if (song.submittedBy === userId) { %>
     <div class="own-song-notice">
-      <p>Þetta er lagið sem þú sentir. Þú getur ekki kosið þitt eigið lag.</p>
+      <p>🎤 Þetta er lagið þitt — þú getur ekki kosið þitt eigið lag.</p>
     </div>
   <% } else if (phase !== 'voting') { %>
     <div class="voting-closed">
       <p>Kosning er ekki opin fyrir þessa umferð.</p>
     </div>
   <% } %>
-  
+
   <div class="navigation">
     <% if (prevSong) { %>
-      <a href="/songs/<%= prevSong.id %>" class="button nav-button prev-button">« Fyrra Lag</a>
+      <a href="/songs/<%= prevSong.id %>" class="button nav-button prev-button">« Fyrra lag</a>
+    <% } else { %>
+      <span class="nav-spacer"></span>
     <% } %>
-    
-    <a href="/groups/<%= song.groupId %>/voting" class="button">Til baka</a>
-    
+
+    <a href="/groups/<%= song.groupId %>/voting" class="button back-button">Öll lögin</a>
+
     <% if (nextSong) { %>
-      <a href="/songs/<%= nextSong.id %>" class="button nav-button next-button">Næsta Lag »</a>
+      <a href="/songs/<%= nextSong.id %>" class="button nav-button next-button">Næsta lag »</a>
+    <% } else { %>
+      <span class="nav-spacer"></span>
     <% } %>
   </div>
 </main>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Countdown á kosningalok.
+    const deadlineEl = document.querySelector('.voting-deadline[data-deadline]');
+    if (deadlineEl) {
+      const target = new Date(deadlineEl.dataset.deadline).getTime();
+      const value = deadlineEl.querySelector('.deadline-value');
+
+      function tick() {
+        const ms = target - Date.now();
+        if (ms <= 0) {
+          value.textContent = 'núna — kosningu lokið!';
+          return;
+        }
+        const s = Math.floor(ms / 1000);
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        value.textContent =
+          (h > 0 ? h + 'klst ' : '') + m + 'mín ' + (h > 0 ? '' : sec + 's');
+        if (ms < 10 * 60 * 1000) deadlineEl.classList.add('urgent');
+      }
+      tick();
+      setInterval(tick, 1000);
+    }
+  });
+</script>
 
 <%- include('partials/footer') %>

@@ -4,48 +4,79 @@
   margin: 0 auto;
 }
 
+/* ---------- Framvinda ("Lag 2 af 5") ---------- */
+
+.song-progress {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.progress-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.progress-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--primary);
+}
+
+.progress-dots .dot.active {
+  background-color: var(--primary);
+  transform: scale(1.25);
+}
+
+/* ---------- Haus ---------- */
+
 .song-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.song-theme-badge {
+  display: inline-block;
+  background-color: var(--secondary);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.3rem 1rem;
+  border-radius: 999px;
+  margin-bottom: 0.75rem;
 }
 
 .song-header h1 {
-  color: var(--dark-blue);
-  margin-bottom: 5px;
+  color: var(--text);
+  margin-bottom: 0.25rem;
 }
 
 .song-header h2 {
-  color: var(--text-color);
+  color: var(--text);
   font-weight: normal;
   margin-top: 0;
-  opacity: 0.8;
+  opacity: 0.75;
 }
 
-.song-title {
-  color: var(--primary);
-  margin-bottom: 0.5rem;
-}
-
-.song-artist {
-  font-size: 1.25rem;
-  font-weight: normal;
-  color: #666;
-  margin-top: 0;
-}
-
-.submitter {
-  margin-top: 0.75rem;
-  font-size: 0.875rem;
-}
+/* ---------- Myndband ---------- */
 
 .video-container {
   position: relative;
   padding-bottom: 56.25%;
   height: 0;
   overflow: hidden;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px var(--shadow);
-  margin-bottom: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px var(--shadow);
+  margin-bottom: 1.5rem;
 }
 
 .video-container iframe {
@@ -57,11 +88,37 @@
   border: none;
 }
 
+/* ---------- Countdown á kosningalok ---------- */
+
+.voting-deadline {
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--primary);
+  background-color: var(--white);
+  border-radius: 999px;
+  padding: 0.5rem 1.25rem;
+  width: fit-content;
+  margin: 0 auto 1.5rem;
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+.voting-deadline.urgent {
+  color: var(--error);
+  animation: deadline-blink 1.5s infinite;
+}
+
+@keyframes deadline-blink {
+  50% { opacity: 0.6; }
+}
+
+/* ---------- Kosningahluti ---------- */
+
 .voting-section {
   background-color: var(--white);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin: 2rem 0;
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 1.5rem 0;
   box-shadow: 0 2px 10px var(--shadow);
   text-align: center;
 }
@@ -69,8 +126,19 @@
 .voting-section h3 {
   margin-top: 0;
   color: var(--primary);
-  margin-bottom: 1.5rem;
-  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.vote-state {
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1.25rem;
+  font-weight: 600;
+}
+
+.voted-state {
+  background-color: #e2f7ed;
+  color: #1b7a4b;
 }
 
 .vote-button {
@@ -80,20 +148,23 @@
   background-color: var(--primary);
   color: var(--white);
   border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-weight: 500;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .vote-button:hover {
   background-color: var(--primary-light);
+  transform: translateY(-1px);
 }
 
 .vote-button.voted {
   background-color: var(--success);
 }
+
+/* ---------- Einkunnagjöf (1-10) ---------- */
 
 .rating-stars {
   display: flex;
@@ -109,86 +180,176 @@
 
 .rating-stars label {
   display: inline-block;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background-color: var(--off-white);
-  border-radius: 4px;
+  border: 2px solid transparent;
+  border-radius: 8px;
   color: var(--text);
   text-align: center;
-  line-height: 40px;
+  line-height: 42px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
+}
+
+.rating-stars label:hover {
+  border-color: var(--secondary);
+  transform: translateY(-2px);
 }
 
 .rating-stars input[type="radio"]:checked + label {
   background-color: var(--secondary);
-  transform: scale(1.1);
+  transform: scale(1.12);
+  box-shadow: 0 2px 8px rgba(255, 209, 102, 0.6);
 }
 
+/* ---------- Topp 3: verðlaunapallur ---------- */
+
 .rank-form {
-  max-width: 400px;
+  max-width: 480px;
   margin: 0 auto;
 }
 
-.rank-selection {
+.rank-podium {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
   margin: 1.5rem 0;
 }
 
-.rank-selection select {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
+.rank-podium input[type="radio"] {
+  display: none;
 }
 
-.current-rank {
-  margin-top: 0.5rem;
-  font-weight: 500;
-  color: var(--primary);
+.podium-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 1rem 0.5rem;
+  background-color: var(--off-white);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.podium-option:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px var(--shadow);
+}
+
+.podium-rank {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  line-height: 42px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--white);
+  background-color: var(--primary);
+}
+
+.podium-option.gold .podium-rank   { background-color: #d4a017; }
+.podium-option.silver .podium-rank { background-color: #9aa5b1; }
+.podium-option.bronze .podium-rank { background-color: #b3702f; }
+
+.podium-label {
+  font-weight: 600;
+  margin-top: 0.35rem;
+}
+
+.podium-points {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.podium-taken {
+  font-size: 0.7rem;
+  color: var(--error);
+  font-weight: 600;
+}
+
+.rank-podium input[type="radio"]:checked + .podium-option {
+  border-color: var(--primary);
+  background-color: #eaf3f9;
+  box-shadow: 0 4px 14px var(--shadow);
 }
 
 .rank-info {
-  margin-top: 1rem;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   color: #666;
+  margin-bottom: 1rem;
 }
 
-.available-ranks {
-  background-color: var(--off-white);
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin-top: 1rem;
+/* ---------- Skilaboð þegar ekki er hægt að kjósa ---------- */
+
+.own-song-notice,
+.voting-closed {
+  background-color: var(--white);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0;
+  text-align: center;
+  box-shadow: 0 2px 10px var(--shadow);
 }
+
+.own-song-notice p,
+.voting-closed p {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* ---------- Flakk milli laga ---------- */
 
 .navigation {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 1rem;
   margin: 2rem 0;
 }
 
 .nav-button {
-  min-width: 120px;
+  min-width: 130px;
   text-align: center;
+}
+
+.nav-spacer {
+  min-width: 130px;
 }
 
 .prev-button {
   background-color: var(--secondary);
+  color: var(--text);
 }
 
 .next-button {
   background-color: var(--primary);
 }
 
+.back-button {
+  background-color: var(--off-white);
+  color: var(--text);
+}
+
 @media (max-width: 768px) {
-  .navigation {
+  .rank-podium {
     flex-direction: column;
-    align-items: center;
   }
-  
-  .navigation .button {
-    width: 100%;
-    text-align: center;
+
+  .navigation {
+    flex-wrap: wrap;
+  }
+
+  .navigation .nav-button,
+  .navigation .back-button {
+    flex: 1;
+  }
+
+  .nav-spacer {
+    display: none;
   }
 }

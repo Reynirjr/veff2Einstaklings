@@ -410,3 +410,85 @@
 .current-round-section {
   order: unset;
 }
+/* ---------- Kosningaborði (efst þegar kosning er í gangi) ---------- */
+
+.voting-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, var(--error) 0%, #c92f3c 100%);
+  color: var(--white);
+  border-radius: 12px;
+  padding: 1.25rem 1.75rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 18px rgba(230, 57, 70, 0.35);
+}
+
+.voting-banner.voted {
+  background: linear-gradient(135deg, var(--success) 0%, #3aa876 100%);
+  box-shadow: 0 4px 18px rgba(87, 204, 153, 0.35);
+}
+
+.voting-banner-text {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.1rem;
+}
+
+.voting-banner-icon {
+  font-size: 2rem;
+}
+
+.voting-banner-cta {
+  background-color: var(--white);
+  color: var(--error);
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 0.75rem 1.75rem;
+  border-radius: 8px;
+  white-space: nowrap;
+  animation: banner-pulse 2s infinite;
+}
+
+.voting-banner.voted .voting-banner-cta {
+  color: #1b7a4b;
+  animation: none;
+}
+
+.voting-banner-cta:hover {
+  background-color: var(--off-white);
+  color: #c92f3c;
+  transform: scale(1.03);
+}
+
+@keyframes banner-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5); }
+  70%  { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+/* ---------- Kosninga-popup ---------- */
+
+.voting-modal-content {
+  text-align: center;
+}
+
+.voting-modal-icon {
+  font-size: 3.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.modal-vote-button {
+  display: inline-block;
+  background-color: var(--error);
+  color: var(--white);
+  margin: 1rem 0 0.5rem;
+}
+
+.modal-vote-button:hover {
+  background-color: #c92f3c;
+  color: var(--white);
+}

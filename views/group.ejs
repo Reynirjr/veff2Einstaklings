@@ -14,6 +14,22 @@
     </div>
   </div>
 
+  <% if (phase === 'voting' && isMember) { %>
+    <div class="voting-banner <%= hasVotedInRound ? 'voted' : '' %>">
+      <div class="voting-banner-text">
+        <span class="voting-banner-icon">🗳️</span>
+        <% if (hasVotedInRound) { %>
+          <span><strong>Þú hefur kosið!</strong> Þú getur breytt atkvæðinu þar til kosningu lýkur.</span>
+        <% } else { %>
+          <span><strong>Kosning er í gangi!</strong> Þú átt eftir að kjósa.</span>
+        <% } %>
+      </div>
+      <a href="/groups/<%= group.id %>/voting" class="button voting-banner-cta">
+        <%= hasVotedInRound ? 'Skoða atkvæðið mitt' : 'Kjósa núna!' %>
+      </a>
+    </div>
+  <% } %>
+
   <section class="group-info-section">
     <div class="group-info">
       <h2>Um Hópinn</h2>
@@ -248,6 +264,48 @@
       </div>
     <% } %>
   </section>
+
+  <% if (phase === 'voting' && isMember && !hasVotedInRound && currentRound) { %>
+    <div id="votingModal" class="modal">
+      <div class="modal-content voting-modal-content">
+        <span class="close">&times;</span>
+        <div class="voting-modal-icon">🗳️</div>
+        <h2>Kosning er í gangi!</h2>
+        <% if (currentRound.theme) { %>
+          <p>Þema umferðarinnar: <strong><%= currentRound.theme %></strong></p>
+        <% } %>
+        <p>Hlustaðu á lögin og kjóstu áður en kosningu lýkur.</p>
+        <a href="/groups/<%= group.id %>/voting" class="button voting-banner-cta modal-vote-button">Byrja að kjósa</a>
+        <p class="small"><a href="#" id="votingModalDismiss">Kannski seinna</a></p>
+      </div>
+    </div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const modal = document.getElementById('votingModal');
+        if (!modal) return;
+        const seenKey = 'votingPopupSeen-<%= currentRound.id %>';
+        if (localStorage.getItem(seenKey)) return;
+
+        modal.style.display = 'block';
+        function dismiss() {
+          localStorage.setItem(seenKey, '1');
+          modal.style.display = 'none';
+        }
+        modal.querySelector('.close').onclick = dismiss;
+        document.getElementById('votingModalDismiss').onclick = function (e) {
+          e.preventDefault();
+          dismiss();
+        };
+        // Muna líka að popuppið sást þegar smellt er á "Byrja að kjósa".
+        modal.querySelector('.modal-vote-button').addEventListener('click', function () {
+          localStorage.setItem(seenKey, '1');
+        });
+        modal.addEventListener('click', function (e) {
+          if (e.target === modal) dismiss();
+        });
+      });
+    </script>
+  <% } %>
 
   <% if (currentRound && currentRound.winnerId && currentRound.winnerId == userId && !currentRound.nextThemeSelected) { %>
     <div id="winnerModal" class="modal">

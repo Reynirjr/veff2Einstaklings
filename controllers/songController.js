@@ -5,20 +5,7 @@ const { validationResult } = require('express-validator');
 const { Song, User, Group, Vote, Round } = require('../models');
 const { computePhase, PHASE } = require('../domain/phases');
 const voteService = require('../services/voteService');
-
-const YT_PATTERNS = [
-  /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/,
-  /(?:youtu\.be\/)([^"&?/\s]{11})/,
-];
-
-function extractYouTubeId(url) {
-  if (!url) return '';
-  for (const pattern of YT_PATTERNS) {
-    const match = url.match(pattern);
-    if (match && match[1]) return match[1];
-  }
-  return '';
-}
+const { extractYouTubeId } = require('../lib/viewHelpers');
 
 /** POST /rounds/:roundId/songs — submit one song for the round's input phase. */
 exports.submitSong = async (req, res) => {

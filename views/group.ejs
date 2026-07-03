@@ -38,7 +38,7 @@
       <p><strong>Þema:</strong> <%= group.theme || 'No theme set' %></p>
       <p><strong>Tegund kosninga:</strong> 
         <% if (group.votingMethod === 'single_vote') { %>
-          Einföld kosnins
+          Einföld kosning
         <% } else if (group.votingMethod === 'top_3') { %>
           Þrjú Bestu
         <% } else if (group.votingMethod === 'rating') { %>
@@ -374,6 +374,16 @@
                 <div class="winner-reveal-song">
                   „<%= winSong.title %>" — <%= winSong.artist %>
                 </div>
+                <% const winVideoId = extractYouTubeId(winSong.youtubeUrl); %>
+                <% if (winVideoId) { %>
+                  <div class="results-video">
+                    <iframe src="https://www.youtube.com/embed/<%= winVideoId %>"
+                      title="Sigurlagið" frameborder="0"
+                      allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
+                    </iframe>
+                  </div>
+                <% } %>
               <% } %>
             </div>
             <button type="button" class="button" id="resultsCloseBtn">Loka</button>

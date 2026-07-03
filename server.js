@@ -16,9 +16,10 @@ async function start() {
 
     if (config.isProduction && !config.dbSync) {
       console.log('Production: using migrations for schema.');
-      // Targeted, additive-only sync: creates the push-subscriptions table if
-      // it doesn't exist yet, without touching any other table.
+      // Targeted, additive-only sync: creates these standalone tables if they
+      // don't exist yet, without touching any other table.
       await db.PushSubscription.sync();
+      await db.RoundReminder.sync();
     } else {
       await db.sequelize.sync({ alter: true });
       console.log(`Database synced (${config.nodeEnv}${config.dbSync ? ', DB_SYNC' : ''}).`);

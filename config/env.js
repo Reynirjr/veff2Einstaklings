@@ -79,6 +79,20 @@ const config = {
     privateKey: process.env.VAPID_PRIVATE_KEY || null,
     subject: process.env.VAPID_SUBJECT || 'mailto:benjamin@onnio.is',
   },
+
+  // Absolute base URL used in outbound emails (links back to the app).
+  appUrl: (process.env.APP_URL || 'https://veff2einstaklings-production.up.railway.app').replace(/\/$/, ''),
+
+  // SMTP for reminder emails. Optional — when unset, email features are no-ops.
+  email: {
+    host: process.env.SMTP_HOST || null,
+    port: Number(process.env.SMTP_PORT || 587),
+    user: process.env.SMTP_USER || null,
+    pass: process.env.SMTP_PASS || null,
+    from: process.env.EMAIL_FROM || process.env.SMTP_USER || null,
+    // Hour of day (server clock = UTC = Icelandic time) for the day-of reminder.
+    reminderHour: Number(process.env.REMINDER_HOUR || 9),
+  },
 };
 
 /**
